@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package gophkeeper;
+
+option go_package = "github.com/sourcecd/gophkeeper/proto;keeperproto";
+
+message SyncPushRequest {
+}
+
+message SyncPushResponse {
+    string Error = 1;
+}
+
+message SyncPullRequest {
+}
+
+message SyncPullResponse {
+}
+
+service Sync {
+    rpc Push(SyncPushRequest) returns (SyncPushResponse);
+    rpc Pull(SyncPullRequest) returns (SyncPullResponse);
+}
