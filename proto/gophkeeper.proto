@@ -4,7 +4,20 @@ package gophkeeper;
 
 option go_package = "github.com/sourcecd/gophkeeper/proto;keeperproto";
 
+message Data {
+    enum Type {
+        CREDENTIALS = 0;
+        TEXT = 1;
+        BINARY = 2;
+        CARD = 3;
+    }
+    string name = 1;
+    Type type = 2;
+    bytes payload = 3;
+}
+
 message SyncPushRequest {
+    repeated Data data = 1;
 }
 
 message SyncPushResponse {
@@ -12,9 +25,11 @@ message SyncPushResponse {
 }
 
 message SyncPullRequest {
+    repeated string name = 1;
 }
 
 message SyncPullResponse {
+    repeated Data data = 1;
 }
 
 service Sync {
