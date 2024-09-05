@@ -8,6 +8,4 @@ Plan:
 
 ## Work Scheme
 
-    ```
     client_cli <-> client_as_local_daemon_with_state_db <-> server ?
-    ```
