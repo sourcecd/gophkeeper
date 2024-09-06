@@ -5,5 +5,4 @@ type ServerOptions struct {
 }
 
 type ClientOptions struct {
-	
 }
