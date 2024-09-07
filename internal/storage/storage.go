@@ -10,6 +10,6 @@ type ServerStorage interface {
 type ClientStorage interface {
 	SyncPut()
 	SyncGet()
-	PutItem()
-	GetItem()
+	PutItem(name, vType string, value []byte) error
+	GetItem(name string, value *valueStore) error
 }

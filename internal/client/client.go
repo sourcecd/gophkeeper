@@ -3,17 +3,22 @@ package client
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sourcecd/gophkeeper/internal/options"
+	"github.com/sourcecd/gophkeeper/internal/storage"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type handlers struct{}
+type handlers struct {
+	store storage.ClientStorage
+}
 
 func syncPush(ctx context.Context, conn *grpc.ClientConn) error {
 	c := keeperproto.NewSyncClient(conn)
@@ -53,12 +58,25 @@ func grpcConn(addr string) (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
-func newHandlers() *handlers {
-	return &handlers{}
+func newHandlers(s storage.ClientStorage) *handlers {
+	return &handlers{store: s}
 }
 
 func (h *handlers) postItem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		req, err := io.ReadAll(r.Body)
+		if err != nil {
+			slog.Error("can't read body")
+			http.Error(w, "can't read body", http.StatusBadRequest)
+			return
+		}
+		if err := h.store.PutItem(chi.URLParam(r, "name"), chi.URLParam(r, "type"), req); err != nil {
+			slog.Error("can't store value")
+			http.Error(w, "can't store value", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("STORED"))
 	}
 }
 
@@ -96,7 +114,7 @@ func Run(ctx context.Context, opt *options.ClientOptions) {
 		log.Fatal(err)
 	}
 
-	h := newHandlers()
+	h := newHandlers(storage.NewInMemory())
 	log.Printf("Starting http server: %s", opt.HttpAddr)
 	if err := http.ListenAndServe(opt.HttpAddr, chiRouter(h)); err != nil {
 		log.Fatal(err)
