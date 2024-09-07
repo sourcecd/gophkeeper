@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/sourcecd/gophkeeper/internal/options"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+type handlers struct{}
 
 func syncPush(ctx context.Context, conn *grpc.ClientConn) error {
 	c := keeperproto.NewSyncClient(conn)
@@ -49,6 +53,35 @@ func grpcConn(addr string) (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
+func newHandlers() *handlers {
+	return &handlers{}
+}
+
+func (h *handlers) postItem() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+	}
+}
+
+func (h *handlers) getItem() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+	}
+}
+
+func (h *handlers) delItem() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+	}
+}
+
+func chiRouter(h *handlers) chi.Router {
+	r := chi.NewRouter()
+
+	r.Post("/add/{type}/{name}", h.postItem())
+	r.Get("/get/{name}", h.getItem())
+	r.Delete("/del/{name}", h.delItem())
+
+	return r
+}
+
 func Run(ctx context.Context, opt *options.ClientOptions) {
 	conn, err := grpcConn(opt.GrpcAddr)
 	if err != nil {
@@ -60,6 +93,12 @@ func Run(ctx context.Context, opt *options.ClientOptions) {
 	}
 	err = syncPull(ctx, conn)
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	h := newHandlers()
+	log.Printf("Starting http server: %s", opt.HttpAddr)
+	if err := http.ListenAndServe(opt.HttpAddr, chiRouter(h)); err != nil {
 		log.Fatal(err)
 	}
 }

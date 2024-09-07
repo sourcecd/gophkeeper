@@ -7,4 +7,5 @@ type ServerOptions struct {
 
 type ClientOptions struct {
 	GrpcAddr string
+	HttpAddr string
 }
