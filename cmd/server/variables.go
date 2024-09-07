@@ -11,6 +11,6 @@ func loadConfiguration(opt *options.ServerOptions) {
 }
 
 func serverFlags(opt *options.ServerOptions) {
-	flag.StringVar(&opt.Dsn, "dsn", "", "dsn for postgres")
+	flag.StringVar(&opt.Dsn, "dsn", "dbname=gophkeeper", "dsn for postgres")
 	flag.Parse()
 }
