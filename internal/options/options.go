@@ -1,7 +1,8 @@
 package options
 
 type ServerOptions struct {
-	Dsn string
+	Dsn      string
+	GrpcAddr string
 }
 
 type ClientOptions struct {
