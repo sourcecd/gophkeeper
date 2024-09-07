@@ -45,7 +45,7 @@ func PgBaseInit(ctx context.Context, dsn string) (*PgDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	if db.CreateDatabaseScheme(ctx) != nil {
+	if err := db.CreateDatabaseScheme(ctx); err != nil {
 		return nil, err
 	}
 	return db, nil
