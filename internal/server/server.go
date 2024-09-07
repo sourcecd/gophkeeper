@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 
@@ -16,12 +17,14 @@ type SyncServer struct {
 }
 
 func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) (*keeperproto.SyncPushResponse, error) {
+	fmt.Println(in)
 	return &keeperproto.SyncPushResponse{
 		Error: "NoError",
 	}, nil
 }
 
 func (s *SyncServer) Pull(ctx context.Context, in *keeperproto.SyncPullRequest) (*keeperproto.SyncPullResponse, error) {
+	fmt.Println(in)
 	return &keeperproto.SyncPullResponse{
 		Data: []*keeperproto.Data{
 			{
@@ -40,6 +43,7 @@ func startGrpcServer(addr string) error {
 	}
 	s := grpc.NewServer()
 	keeperproto.RegisterSyncServer(s, &SyncServer{})
+	log.Printf("Starting grpc server on: %s", addr)
 	if err := s.Serve(l); err != nil {
 		return err
 	}

@@ -12,6 +12,6 @@ func loadConfiguration(opt *options.ServerOptions) {
 
 func serverFlags(opt *options.ServerOptions) {
 	flag.StringVar(&opt.Dsn, "dsn", "dbname=gophkeeper", "dsn for postgres")
-	flag.StringVar(&opt.GrpcAddr, "grpc-addr", "localhost:2135", "grpc server address")
+	flag.StringVar(&opt.GrpcAddr, "grpc-addr", "localhost:2135", "listen grpc server address")
 	flag.Parse()
 }
