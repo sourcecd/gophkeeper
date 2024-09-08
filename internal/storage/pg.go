@@ -4,16 +4,23 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"log"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	keeperproto "github.com/sourcecd/gophkeeper/proto"
+)
+
+const (
+	putDataRequest = "INSERT INTO data (name, type, payload) VALUES ($1, $2, $3)"
 )
 
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
 
 type PgDB struct {
-	db *sql.DB
+	db                 *sql.DB
+	stmtPutDataRequest *sql.Stmt
 }
 
 func NewPgDB(dsn string) (*PgDB, error) {
@@ -24,6 +31,16 @@ func NewPgDB(dsn string) (*PgDB, error) {
 	return &PgDB{
 		db: db,
 	}, nil
+}
+
+func (pg *PgDB) PrepStmt() error {
+	var err error
+	pg.stmtPutDataRequest, err = pg.db.Prepare(putDataRequest)
+	if err != nil {
+		return err
+	}
+	log.Println("requests prepared")
+	return nil
 }
 
 func (pg *PgDB) CreateDatabaseScheme(ctx context.Context) error {
@@ -40,12 +57,41 @@ func (pg *PgDB) CreateDatabaseScheme(ctx context.Context) error {
 	return nil
 }
 
+func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data) error {
+	tx, err := pg.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, v := range data {
+		if _, err := tx.StmtContext(ctx, pg.stmtPutDataRequest).ExecContext(ctx, v.Name, v.Type, v.Payload); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (pg *PgDB) SyncGet() error {
+	return nil
+}
+
+func (pg *PgDB) RegisterUser() error {
+	return nil
+}
+
+func (pg *PgDB) AuthUser() error {
+	return nil
+}
+
 func PgBaseInit(ctx context.Context, dsn string) (*PgDB, error) {
 	db, err := NewPgDB(dsn)
 	if err != nil {
 		return nil, err
 	}
 	if err := db.CreateDatabaseScheme(ctx); err != nil {
+		return nil, err
+	}
+	if err := db.PrepStmt(); err != nil {
 		return nil, err
 	}
 	return db, nil

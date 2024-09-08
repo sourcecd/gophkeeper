@@ -1,12 +1,16 @@
 package storage
 
-import keeperproto "github.com/sourcecd/gophkeeper/proto"
+import (
+	"context"
+
+	keeperproto "github.com/sourcecd/gophkeeper/proto"
+)
 
 type ServerStorage interface {
-	RegisterUser()
-	AuthUser()
-	SyncPut()
-	SyncGet()
+	RegisterUser() error
+	AuthUser() error
+	SyncPut(ctx context.Context, data []*keeperproto.Data) error
+	SyncGet() error
 }
 
 type ClientStorage interface {

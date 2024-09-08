@@ -14,12 +14,21 @@ import (
 
 type SyncServer struct {
 	keeperproto.UnimplementedSyncServer
+	store storage.ServerStorage
+}
+
+func NewSyncServer(db storage.ServerStorage) *SyncServer {
+	return &SyncServer{store: db}
 }
 
 func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) (*keeperproto.SyncPushResponse, error) {
-	fmt.Println(in)
+	if err := s.store.SyncPut(ctx, in.Data); err != nil {
+		return &keeperproto.SyncPushResponse{
+			Error: err.Error(),
+		}, nil
+	}
 	return &keeperproto.SyncPushResponse{
-		Error: "NoError",
+		Error: "",
 	}, nil
 }
 
@@ -36,13 +45,13 @@ func (s *SyncServer) Pull(ctx context.Context, in *keeperproto.SyncPullRequest) 
 	}, nil
 }
 
-func startGrpcServer(addr string) error {
+func startGrpcServer(addr string, syncServer *SyncServer) error {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 	s := grpc.NewServer()
-	keeperproto.RegisterSyncServer(s, &SyncServer{})
+	keeperproto.RegisterSyncServer(s, syncServer)
 	log.Printf("Starting grpc server on: %s", addr)
 	if err := s.Serve(l); err != nil {
 		return err
@@ -51,12 +60,12 @@ func startGrpcServer(addr string) error {
 }
 
 func Run(ctx context.Context, opt *options.ServerOptions) {
-	_, err := storage.PgBaseInit(ctx, opt.Dsn)
+	db, err := storage.PgBaseInit(ctx, opt.Dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := startGrpcServer(opt.GrpcAddr); err != nil {
+	if err := startGrpcServer(opt.GrpcAddr, NewSyncServer(db)); err != nil {
 		log.Fatal(err)
 	}
 }
