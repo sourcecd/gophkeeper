@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
+	keeperproto "github.com/sourcecd/gophkeeper/proto"
 )
 
 type valueStore struct {
@@ -25,7 +26,17 @@ func NewInMemory() *ClientInMemory {
 func (c *ClientInMemory) SyncPut() {
 }
 
-func (c *ClientInMemory) SyncGet() {
+func (c *ClientInMemory) SyncGet(protodata *[]*keeperproto.Data) error {
+	c.RLock()
+	defer c.RUnlock()
+	for k, v := range c.data {
+		*protodata = append(*protodata, &keeperproto.Data{
+			Name:    k,
+			Type:    keeperproto.Data_Type(keeperproto.Data_Type_value[v.valueType]),
+			Payload: v.value,
+		})
+	}
+	return nil
 }
 
 func (c *ClientInMemory) PutItem(name, vType string, value []byte) error {

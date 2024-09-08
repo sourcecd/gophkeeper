@@ -2,60 +2,30 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
 	"github.com/sourcecd/gophkeeper/internal/options"
 	"github.com/sourcecd/gophkeeper/internal/storage"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type handlers struct {
 	store storage.ClientStorage
 }
 
-func syncPush(ctx context.Context, conn *grpc.ClientConn) error {
-	c := keeperproto.NewSyncClient(conn)
-	resp, err := c.Push(ctx, &keeperproto.SyncPushRequest{
-		Data: []*keeperproto.Data{
-			{
-				Name:    "TEST2",
-				Type:    keeperproto.Data_Type(keeperproto.Data_Type_value["TEXT"]),
-				Payload: []byte("OK"),
-			},
-		},
-	})
-	if err != nil {
-		return err
+func checkTypeValue(r *http.Request) error {
+	s := chi.URLParam(r, "type")
+	if _, ok := keeperproto.Data_Type_value[strings.ToUpper(s)]; !ok {
+		return fixederrors.ErrUnkType
 	}
-	fmt.Println(resp)
 	return nil
-}
-
-func syncPull(ctx context.Context, conn *grpc.ClientConn) error {
-	c := keeperproto.NewSyncClient(conn)
-	resp, err := c.Pull(ctx, &keeperproto.SyncPullRequest{
-		Name: []string{},
-	})
-	if err != nil {
-		return err
-	}
-	fmt.Println(resp)
-	return nil
-}
-
-func grpcConn(addr string) (*grpc.ClientConn, error) {
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
-	}
-	return conn, nil
 }
 
 func newHandlers(s storage.ClientStorage) *handlers {
@@ -64,13 +34,18 @@ func newHandlers(s storage.ClientStorage) *handlers {
 
 func (h *handlers) postItem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if err := checkTypeValue(r); err != nil {
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		req, err := io.ReadAll(r.Body)
 		if err != nil {
 			slog.Error("can't read body")
 			http.Error(w, "can't read body", http.StatusBadRequest)
 			return
 		}
-		if err := h.store.PutItem(chi.URLParam(r, "name"), chi.URLParam(r, "type"), req); err != nil {
+		if err := h.store.PutItem(chi.URLParam(r, "name"), strings.ToUpper(chi.URLParam(r, "type")), req); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -119,20 +94,26 @@ func chiRouter(h *handlers) chi.Router {
 }
 
 func Run(ctx context.Context, opt *options.ClientOptions) {
+	inmemory := storage.NewInMemory()
 	conn, err := grpcConn(opt.GrpcAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = syncPush(ctx, conn)
+	go func() {
+		for {
+			err = syncPush(ctx, conn, inmemory)
+			if err != nil {
+				log.Fatal(err)
+			}
+			time.Sleep(5 * time.Second)
+		}
+	}()
+	/*err = syncPull(ctx, conn)
 	if err != nil {
 		log.Fatal(err)
-	}
-	err = syncPull(ctx, conn)
-	if err != nil {
-		log.Fatal(err)
-	}
+	}*/
 
-	h := newHandlers(storage.NewInMemory())
+	h := newHandlers(inmemory)
 	log.Printf("Starting http server: %s", opt.HttpAddr)
 	if err := http.ListenAndServe(opt.HttpAddr, chiRouter(h)); err != nil {
 		log.Fatal(err)
