@@ -41,12 +41,12 @@ func (c *ClientInMemory) PutItem(name, vType string, value []byte) error {
 	return nil
 }
 
-func (c *ClientInMemory) GetItem(name string, value *valueStore) error {
+func (c *ClientInMemory) GetItem(name string, valueType *string, value *[]byte) error {
 	c.RLock()
 	defer c.RUnlock()
 	if v, ok := c.data[name]; ok {
-		value.value = v.value
-		value.valueType = v.valueType
+		*value = v.value
+		*valueType = v.valueType
 		return nil
 	}
 	return fixederrors.ErrNoValue

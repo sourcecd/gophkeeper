@@ -71,17 +71,28 @@ func (h *handlers) postItem() http.HandlerFunc {
 			return
 		}
 		if err := h.store.PutItem(chi.URLParam(r, "name"), chi.URLParam(r, "type"), req); err != nil {
-			slog.Error("can't store value")
-			http.Error(w, "can't store value", http.StatusInternalServerError)
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("STORED"))
+		w.Write([]byte("STORED\n"))
 	}
 }
 
 func (h *handlers) getItem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var (
+			valType string
+			val     []byte
+		)
+		if err := h.store.GetItem(chi.URLParam(r, "name"), &valType, &val); err != nil {
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(val)
 	}
 }
 

@@ -11,5 +11,5 @@ type ClientStorage interface {
 	SyncPut()
 	SyncGet()
 	PutItem(name, vType string, value []byte) error
-	GetItem(name string, value *valueStore) error
+	GetItem(name string, valueType *string, value *[]byte) error
 }
