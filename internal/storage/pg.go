@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	putDataRequest = "INSERT INTO data (name, type, payload) VALUES ($1, $2, $3)"
+	// TODO remove on conflict
+	putDataRequest = "INSERT INTO data (name, type, payload) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING"
 )
 
 //go:embed migrations/*.sql
