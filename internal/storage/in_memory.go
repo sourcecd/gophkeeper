@@ -51,3 +51,13 @@ func (c *ClientInMemory) GetItem(name string, valueType *string, value *[]byte) 
 	}
 	return fixederrors.ErrNoValue
 }
+
+func (c *ClientInMemory) DelItem(name string) error {
+	c.Lock()
+	defer c.Unlock()
+	if _, ok := c.data[name]; ok {
+		delete(c.data, name)
+		return nil
+	}
+	return fixederrors.ErrNoValue
+}

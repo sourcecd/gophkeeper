@@ -98,6 +98,13 @@ func (h *handlers) getItem() http.HandlerFunc {
 
 func (h *handlers) delItem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if err := h.store.DelItem(chi.URLParam(r, "name")); err != nil {
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("REMOVED\n"))
 	}
 }
 
