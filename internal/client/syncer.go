@@ -24,6 +24,8 @@ func syncPush(ctx context.Context, conn *grpc.ClientConn, store storage.ClientSt
 	if err != nil {
 		return err
 	}
+	log.Printf("Synced records to server: %d", len(data))
+
 	if resp.Error != "" {
 		log.Println(resp.Error)
 	}
@@ -42,6 +44,7 @@ func syncPull(ctx context.Context, conn *grpc.ClientConn, store storage.ClientSt
 	if err := store.SyncPut(resp.Data); err != nil {
 		return err
 	}
+	log.Printf("Synced records from server: %d", len(resp.Data))
 
 	return nil
 }
