@@ -99,6 +99,12 @@ func Run(ctx context.Context, opt *options.ClientOptions) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	err = syncPull(ctx, conn, inmemory)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	go func() {
 		for {
 			err = syncPush(ctx, conn, inmemory)
@@ -108,10 +114,6 @@ func Run(ctx context.Context, opt *options.ClientOptions) {
 			time.Sleep(5 * time.Second)
 		}
 	}()
-	/*err = syncPull(ctx, conn)
-	if err != nil {
-		log.Fatal(err)
-	}*/
 
 	h := newHandlers(inmemory)
 	log.Printf("Starting http server: %s", opt.HttpAddr)

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"log"
 	"sync"
 
 	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
@@ -23,7 +24,17 @@ func NewInMemory() *ClientInMemory {
 	}
 }
 
-func (c *ClientInMemory) SyncPut() {
+func (c *ClientInMemory) SyncPut(protodata []*keeperproto.Data) error {
+	c.Lock()
+	defer c.Unlock()
+	for _, v := range protodata {
+		c.data[v.Name] = valueStore{
+			valueType: v.Type.String(),
+			value:     v.Payload,
+		}
+	}
+	log.Printf("Synced records: %d", len(c.data))
+	return nil
 }
 
 func (c *ClientInMemory) SyncGet(protodata *[]*keeperproto.Data) error {

@@ -2,7 +2,7 @@ package client
 
 import (
 	"context"
-	"fmt"
+	"log"
 
 	"github.com/sourcecd/gophkeeper/internal/storage"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
@@ -24,11 +24,13 @@ func syncPush(ctx context.Context, conn *grpc.ClientConn, store storage.ClientSt
 	if err != nil {
 		return err
 	}
-	fmt.Println(resp)
+	if resp.Error != "" {
+		log.Println(resp.Error)
+	}
 	return nil
 }
 
-func syncPull(ctx context.Context, conn *grpc.ClientConn) error {
+func syncPull(ctx context.Context, conn *grpc.ClientConn, store storage.ClientStorage) error {
 	c := keeperproto.NewSyncClient(conn)
 	resp, err := c.Pull(ctx, &keeperproto.SyncPullRequest{
 		Name: []string{},
@@ -36,7 +38,11 @@ func syncPull(ctx context.Context, conn *grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(resp)
+
+	if err := store.SyncPut(resp.Data); err != nil {
+		return err
+	}
+
 	return nil
 }
 

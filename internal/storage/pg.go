@@ -13,15 +13,17 @@ import (
 
 const (
 	// TODO remove on conflict
-	putDataRequest = "INSERT INTO data (name, type, payload) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING"
+	putDataRequest       = "INSERT INTO data (name, type, payload) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING"
+	selectAllDataRequest = "SELECT name, type, payload FROM data"
 )
 
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
 
 type PgDB struct {
-	db                 *sql.DB
-	stmtPutDataRequest *sql.Stmt
+	db                       *sql.DB
+	stmtPutDataRequest       *sql.Stmt
+	stmtSelectAllDataRequest *sql.Stmt
 }
 
 func NewPgDB(dsn string) (*PgDB, error) {
@@ -37,6 +39,10 @@ func NewPgDB(dsn string) (*PgDB, error) {
 func (pg *PgDB) PrepStmt() error {
 	var err error
 	pg.stmtPutDataRequest, err = pg.db.Prepare(putDataRequest)
+	if err != nil {
+		return err
+	}
+	pg.stmtSelectAllDataRequest, err = pg.db.Prepare(selectAllDataRequest)
 	if err != nil {
 		return err
 	}
@@ -72,7 +78,33 @@ func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data) error {
 	return tx.Commit()
 }
 
-func (pg *PgDB) SyncGet() error {
+func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperproto.Data) error {
+	var (
+		name    string
+		vType   string
+		payload []byte
+	)
+	if len(names) == 0 {
+		rows, err := pg.stmtSelectAllDataRequest.QueryContext(ctx)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			if err := rows.Scan(&name, &vType, &payload); err != nil {
+				return err
+			}
+			*data = append(*data, &keeperproto.Data{
+				Name:    name,
+				Type:    keeperproto.Data_Type(keeperproto.Data_Type_value[vType]),
+				Payload: payload,
+			})
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

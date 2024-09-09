@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 
@@ -33,15 +32,12 @@ func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) 
 }
 
 func (s *SyncServer) Pull(ctx context.Context, in *keeperproto.SyncPullRequest) (*keeperproto.SyncPullResponse, error) {
-	fmt.Println(in)
+	var data []*keeperproto.Data
+	if err := s.store.SyncGet(ctx, in.Name, &data); err != nil {
+		return nil, err
+	}
 	return &keeperproto.SyncPullResponse{
-		Data: []*keeperproto.Data{
-			{
-				Name:    "TEST",
-				Type:    keeperproto.Data_Type(keeperproto.Data_Type_value["TEXT"]),
-				Payload: []byte("TEST"),
-			},
-		},
+		Data: data,
 	}, nil
 }
 
