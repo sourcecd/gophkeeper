@@ -26,6 +26,7 @@ func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) 
 			Error: err.Error(),
 		}, nil
 	}
+	log.Printf("Synced records from client: %d", len(in.Data))
 	return &keeperproto.SyncPushResponse{
 		Error: "",
 	}, nil
@@ -36,6 +37,7 @@ func (s *SyncServer) Pull(ctx context.Context, in *keeperproto.SyncPullRequest) 
 	if err := s.store.SyncGet(ctx, in.Name, &data); err != nil {
 		return nil, err
 	}
+	log.Printf("Synced records to client: %d", len(data))
 	return &keeperproto.SyncPullResponse{
 		Data: data,
 	}, nil

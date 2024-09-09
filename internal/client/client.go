@@ -99,6 +99,7 @@ func Run(ctx context.Context, opt *options.ClientOptions) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer conn.Close()
 
 	err = syncPull(ctx, conn, inmemory)
 	if err != nil {
