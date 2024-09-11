@@ -16,7 +16,7 @@ message Data {
         DELETE = 1;
     }
     string name = 1;
-    DType type = 2;
+    DType dtype = 2;
     OpType optype = 3;
     bytes payload = 4;
 }

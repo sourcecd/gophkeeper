@@ -80,7 +80,7 @@ func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data) error {
 	}
 	defer tx.Rollback()
 	for _, v := range data {
-		if _, err := tx.StmtContext(ctx, pg.stmtPutDataRequest).ExecContext(ctx, v.Name, v.Type, v.Payload); err != nil {
+		if _, err := tx.StmtContext(ctx, pg.stmtPutDataRequest).ExecContext(ctx, v.Name, v.Dtype, v.Payload); err != nil {
 			return err
 		}
 	}
@@ -105,7 +105,7 @@ func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperprot
 			}
 			*data = append(*data, &keeperproto.Data{
 				Name:    name,
-				Type:    keeperproto.Data_DType(keeperproto.Data_DType_value[vType]),
+				Dtype:   keeperproto.Data_DType(keeperproto.Data_DType_value[vType]),
 				Payload: payload,
 			})
 		}

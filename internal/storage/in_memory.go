@@ -28,7 +28,7 @@ func (c *ClientInMemory) SyncPut(protodata []*keeperproto.Data) error {
 	defer c.Unlock()
 	for _, v := range protodata {
 		c.data[v.Name] = valueStore{
-			valueType: v.Type.String(),
+			valueType: v.Dtype.String(),
 			value:     v.Payload,
 		}
 	}
@@ -41,7 +41,7 @@ func (c *ClientInMemory) SyncGet(protodata *[]*keeperproto.Data) error {
 	for k, v := range c.data {
 		*protodata = append(*protodata, &keeperproto.Data{
 			Name:    k,
-			Type:    keeperproto.Data_DType(keeperproto.Data_DType_value[v.valueType]),
+			Dtype:   keeperproto.Data_DType(keeperproto.Data_DType_value[v.valueType]),
 			Payload: v.value,
 		})
 	}

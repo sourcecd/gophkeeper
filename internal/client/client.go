@@ -21,6 +21,7 @@ import (
 type handlers struct {
 	store storage.ClientStorage
 	ctx   context.Context
+	conn  *grpc.ClientConn
 }
 
 func checkTypeValue(r *http.Request) error {
@@ -31,10 +32,11 @@ func checkTypeValue(r *http.Request) error {
 	return nil
 }
 
-func newHandlers(ctx context.Context, s storage.ClientStorage) *handlers {
+func newHandlers(ctx context.Context, s storage.ClientStorage, conn *grpc.ClientConn) *handlers {
 	return &handlers{
 		store: s,
 		ctx:   ctx,
+		conn:  conn,
 	}
 }
 
@@ -51,9 +53,23 @@ func (h *handlers) postItem() http.HandlerFunc {
 			http.Error(w, "can't read body", http.StatusBadRequest)
 			return
 		}
-		if err := h.store.PutItem(chi.URLParam(r, "name"), strings.ToUpper(chi.URLParam(r, "type")), req); err != nil {
+		name := chi.URLParam(r, "name")
+		dtype := strings.ToUpper(chi.URLParam(r, "type"))
+		if err := h.store.PutItem(name, dtype, req); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err := syncPush(h.ctx, h.conn, nil, []*keeperproto.Data{
+			{
+				Name:    name,
+				Optype:  keeperproto.Data_OpType(keeperproto.Data_OpType_value["ADD"]),
+				Dtype:   keeperproto.Data_DType(keeperproto.Data_DType_value[dtype]),
+				Payload: req,
+			},
+		}); err != nil {
+			slog.Error(err.Error())
+			http.Error(w, "error add data to server", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -77,7 +93,7 @@ func (h *handlers) getItem() http.HandlerFunc {
 	}
 }
 
-func (h *handlers) delItem(conn *grpc.ClientConn) http.HandlerFunc {
+func (h *handlers) delItem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		n := chi.URLParam(r, "name")
 		if err := h.store.DelItem(n); err != nil {
@@ -85,14 +101,14 @@ func (h *handlers) delItem(conn *grpc.ClientConn) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if err := syncPush(h.ctx, conn, nil, []*keeperproto.Data{
+		if err := syncPush(h.ctx, h.conn, nil, []*keeperproto.Data{
 			{
 				Name:   n,
 				Optype: keeperproto.Data_OpType(keeperproto.Data_OpType_value["DELETE"]),
 			},
 		}); err != nil {
 			slog.Error(err.Error())
-			http.Error(w, "error when delete data from server", http.StatusBadRequest)
+			http.Error(w, "error when delete data from server", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -100,12 +116,12 @@ func (h *handlers) delItem(conn *grpc.ClientConn) http.HandlerFunc {
 	}
 }
 
-func chiRouter(h *handlers, conn *grpc.ClientConn) chi.Router {
+func chiRouter(h *handlers) chi.Router {
 	r := chi.NewRouter()
 
 	r.Post("/add/{type}/{name}", h.postItem())
 	r.Get("/get/{name}", h.getItem())
-	r.Delete("/del/{name}", h.delItem(conn))
+	r.Delete("/del/{name}", h.delItem())
 
 	return r
 }
@@ -123,9 +139,9 @@ func Run(ctx context.Context, opt *options.ClientOptions) {
 		log.Fatal(err)
 	}
 
-	h := newHandlers(ctx, inmemory)
+	h := newHandlers(ctx, inmemory, conn)
 	log.Printf("Starting http server: %s", opt.HttpAddr)
-	if err := http.ListenAndServe(opt.HttpAddr, chiRouter(h, conn)); err != nil {
+	if err := http.ListenAndServe(opt.HttpAddr, chiRouter(h)); err != nil {
 		log.Fatal(err)
 	}
 }

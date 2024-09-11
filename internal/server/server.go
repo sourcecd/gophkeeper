@@ -21,9 +21,6 @@ func NewSyncServer(db storage.ServerStorage) *SyncServer {
 }
 
 func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) (*keeperproto.SyncPushResponse, error) {
-	if len(in.Data) == 1 && in.Data[0].Optype == keeperproto.Data_OpType(keeperproto.Data_OpType_value["DELETE"]) {
-
-	}
 	if err := s.store.SyncPut(ctx, in.Data); err != nil {
 		return &keeperproto.SyncPushResponse{
 			Error: err.Error(),
