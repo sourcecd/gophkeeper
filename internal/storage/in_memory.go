@@ -41,7 +41,7 @@ func (c *ClientInMemory) SyncGet(protodata *[]*keeperproto.Data) error {
 	for k, v := range c.data {
 		*protodata = append(*protodata, &keeperproto.Data{
 			Name:    k,
-			Type:    keeperproto.Data_Type(keeperproto.Data_Type_value[v.valueType]),
+			Type:    keeperproto.Data_DType(keeperproto.Data_DType_value[v.valueType]),
 			Payload: v.value,
 		})
 	}

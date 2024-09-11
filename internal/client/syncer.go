@@ -10,12 +10,14 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func syncPush(ctx context.Context, conn *grpc.ClientConn, store storage.ClientStorage) error {
+func syncPush(ctx context.Context, conn *grpc.ClientConn, store storage.ClientStorage, data []*keeperproto.Data) error {
 	c := keeperproto.NewSyncClient(conn)
-	var data []*keeperproto.Data
 
-	if err := store.SyncGet(&data); err != nil {
-		return err
+	// if need full sync from client store
+	if store != nil {
+		if err := store.SyncGet(&data); err != nil {
+			return err
+		}
 	}
 
 	resp, err := c.Push(ctx, &keeperproto.SyncPushRequest{

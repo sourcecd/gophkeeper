@@ -7,29 +7,35 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
+
+	// "time"
 
 	"github.com/go-chi/chi/v5"
 	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
 	"github.com/sourcecd/gophkeeper/internal/options"
 	"github.com/sourcecd/gophkeeper/internal/storage"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
+	"google.golang.org/grpc"
 )
 
 type handlers struct {
 	store storage.ClientStorage
+	ctx   context.Context
 }
 
 func checkTypeValue(r *http.Request) error {
 	s := chi.URLParam(r, "type")
-	if _, ok := keeperproto.Data_Type_value[strings.ToUpper(s)]; !ok {
+	if _, ok := keeperproto.Data_DType_value[strings.ToUpper(s)]; !ok {
 		return fixederrors.ErrUnkType
 	}
 	return nil
 }
 
-func newHandlers(s storage.ClientStorage) *handlers {
-	return &handlers{store: s}
+func newHandlers(ctx context.Context, s storage.ClientStorage) *handlers {
+	return &handlers{
+		store: s,
+		ctx:   ctx,
+	}
 }
 
 func (h *handlers) postItem() http.HandlerFunc {
@@ -71,11 +77,22 @@ func (h *handlers) getItem() http.HandlerFunc {
 	}
 }
 
-func (h *handlers) delItem() http.HandlerFunc {
+func (h *handlers) delItem(conn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := h.store.DelItem(chi.URLParam(r, "name")); err != nil {
+		n := chi.URLParam(r, "name")
+		if err := h.store.DelItem(n); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err := syncPush(h.ctx, conn, nil, []*keeperproto.Data{
+			{
+				Name:   n,
+				Optype: keeperproto.Data_OpType(keeperproto.Data_OpType_value["DELETE"]),
+			},
+		}); err != nil {
+			slog.Error(err.Error())
+			http.Error(w, "error when delete data from server", http.StatusBadRequest)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -83,12 +100,12 @@ func (h *handlers) delItem() http.HandlerFunc {
 	}
 }
 
-func chiRouter(h *handlers) chi.Router {
+func chiRouter(h *handlers, conn *grpc.ClientConn) chi.Router {
 	r := chi.NewRouter()
 
 	r.Post("/add/{type}/{name}", h.postItem())
 	r.Get("/get/{name}", h.getItem())
-	r.Delete("/del/{name}", h.delItem())
+	r.Delete("/del/{name}", h.delItem(conn))
 
 	return r
 }
@@ -106,19 +123,9 @@ func Run(ctx context.Context, opt *options.ClientOptions) {
 		log.Fatal(err)
 	}
 
-	go func() {
-		for {
-			err = syncPush(ctx, conn, inmemory)
-			if err != nil {
-				log.Fatal(err)
-			}
-			time.Sleep(5 * time.Second)
-		}
-	}()
-
-	h := newHandlers(inmemory)
+	h := newHandlers(ctx, inmemory)
 	log.Printf("Starting http server: %s", opt.HttpAddr)
-	if err := http.ListenAndServe(opt.HttpAddr, chiRouter(h)); err != nil {
+	if err := http.ListenAndServe(opt.HttpAddr, chiRouter(h, conn)); err != nil {
 		log.Fatal(err)
 	}
 }

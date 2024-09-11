@@ -15,6 +15,7 @@ const (
 	// TODO remove on conflict
 	putDataRequest       = "INSERT INTO data (name, type, payload) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING"
 	selectAllDataRequest = "SELECT name, type, payload FROM data"
+	deleteItemRequest    = "DELETE FROM data WHERE name = $1"
 )
 
 //go:embed migrations/*.sql
@@ -24,6 +25,7 @@ type PgDB struct {
 	db                       *sql.DB
 	stmtPutDataRequest       *sql.Stmt
 	stmtSelectAllDataRequest *sql.Stmt
+	stmtDeleteItemRequest    *sql.Stmt
 }
 
 func NewPgDB(dsn string) (*PgDB, error) {
@@ -46,6 +48,7 @@ func (pg *PgDB) PrepStmt() error {
 	if err != nil {
 		return err
 	}
+	pg.stmtDeleteItemRequest, err = pg.db.Prepare(deleteItemRequest)
 	log.Println("requests prepared")
 	return nil
 }
@@ -65,6 +68,12 @@ func (pg *PgDB) CreateDatabaseScheme(ctx context.Context) error {
 }
 
 func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data) error {
+	if len(data) == 1 && data[0].Optype == keeperproto.Data_OpType(keeperproto.Data_OpType_value["DELETE"]) {
+		if _, err := pg.stmtDeleteItemRequest.ExecContext(ctx, data[0].Name); err != nil {
+			return err
+		}
+		return nil
+	}
 	tx, err := pg.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -96,7 +105,7 @@ func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperprot
 			}
 			*data = append(*data, &keeperproto.Data{
 				Name:    name,
-				Type:    keeperproto.Data_Type(keeperproto.Data_Type_value[vType]),
+				Type:    keeperproto.Data_DType(keeperproto.Data_DType_value[vType]),
 				Payload: payload,
 			})
 		}

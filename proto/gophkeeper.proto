@@ -5,15 +5,20 @@ package gophkeeper;
 option go_package = "github.com/sourcecd/gophkeeper/proto;keeperproto";
 
 message Data {
-    enum Type {
+    enum DType {
         CREDENTIALS = 0;
         TEXT = 1;
         BINARY = 2;
         CARD = 3;
     }
+    enum OpType {
+        ADD = 0;
+        DELETE = 1;
+    }
     string name = 1;
-    Type type = 2;
-    bytes payload = 3;
+    DType type = 2;
+    OpType optype = 3;
+    bytes payload = 4;
 }
 
 message SyncPushRequest {
