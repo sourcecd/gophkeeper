@@ -155,7 +155,7 @@ func (pg *PgDB) AuthUser(ctx context.Context, reg *auth.User, userid *int64) err
 		password string
 	)
 	row := pg.stmtGetUserRequest.QueryRowContext(ctx, reg.Username)
-	if err := row.Scan(&userid, &login, &password); err != nil {
+	if err := row.Scan(userid, &login, &password); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return fixederrors.ErrUserNotExists
 		}
@@ -164,6 +164,7 @@ func (pg *PgDB) AuthUser(ctx context.Context, reg *auth.User, userid *int64) err
 	if reg.HashedPassword == password {
 		return nil
 	}
+	userid = nil
 	return fixederrors.ErrUserNotExists
 }
 
