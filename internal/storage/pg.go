@@ -161,7 +161,7 @@ func (pg *PgDB) AuthUser(ctx context.Context, reg *auth.User, userid *int64) err
 		}
 		return err
 	}
-	if reg.HashedPassword == password {
+	if reg.IsCorrectPassword(password) {
 		return nil
 	}
 	userid = nil

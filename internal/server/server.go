@@ -41,6 +41,25 @@ func (s *SyncServer) RegisterUser(ctx context.Context, in *keeperproto.AuthReque
 	}, nil
 }
 
+// TODO move jwt to ???
+func (s *SyncServer) AuthUser(ctx context.Context, in *keeperproto.AuthRequest) (*keeperproto.AuthResponse, error) {
+	var userid int64
+	if err := s.store.AuthUser(ctx, &auth.User{
+		Username: in.Login,
+		// not hashed
+		HashedPassword: in.Password,
+	}, &userid); err != nil {
+		return nil, err
+	}
+	token, err := s.jwtm.Generate(userid)
+	if err != nil {
+		return nil, err
+	}
+	return &keeperproto.AuthResponse{
+		Token: token,
+	}, nil
+}
+
 func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) (*keeperproto.SyncPushResponse, error) {
 	if err := s.store.SyncPut(ctx, in.Data); err != nil {
 		return &keeperproto.SyncPushResponse{

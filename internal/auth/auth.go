@@ -42,8 +42,8 @@ func (jwtm *JWTManager) PrepareUser(username string, password string) (*User, er
 	return user, nil
 }
 
-func (user *User) IsCorrectPassword(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password))
+func (user *User) IsCorrectPassword(passwordrealhashed string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(passwordrealhashed), []byte(user.HashedPassword))
 	return err == nil
 }
 
