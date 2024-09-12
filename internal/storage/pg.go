@@ -18,7 +18,7 @@ import (
 
 const (
 	// TODO remove on conflict
-	putDataRequest       = "INSERT INTO data (name, type, payload) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING"
+	putDataRequest       = "INSERT INTO data (name, type, payload) VALUES ($1, $2, $3)"
 	selectAllDataRequest = "SELECT name, type, payload FROM data"
 	deleteItemRequest    = "DELETE FROM data WHERE name = $1"
 	createUserRequest    = "INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id"

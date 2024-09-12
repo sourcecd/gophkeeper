@@ -87,15 +87,9 @@ func (manager *JWTManager) Verify(accessToken string) (*UserClaims, error) {
 	return claims, nil
 }
 
-func JwtInterceptor(
-	ctx context.Context,
-	req interface{},
-	info *grpc.UnaryServerInfo,
-	handler grpc.UnaryHandler,
-) (interface{}, error) {
+func JwtInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	ctx = metadata.NewOutgoingContext(ctx, map[string][]string{
 		"token": {"test"},
 	})
-	fmt.Println(info.FullMethod)
 	return handler(ctx, req)
 }

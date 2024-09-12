@@ -116,12 +116,48 @@ func (h *handlers) delItem() http.HandlerFunc {
 	}
 }
 
+func (h *handlers) registerUser() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var token string
+		login := chi.URLParam(r, "login")
+		password := chi.URLParam(r, "password")
+
+		if err := registerUser(h.ctx, h.conn, login, password, &token); err != nil {
+			slog.Info(err.Error())
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(token + "\n"))
+	}
+}
+
+func (h *handlers) authUser() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var token string
+		login := chi.URLParam(r, "login")
+		password := chi.URLParam(r, "password")
+
+		if err := authUser(h.ctx, h.conn, login, password, &token); err != nil {
+			slog.Info(err.Error())
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(token + "\n"))
+	}
+}
+
 func chiRouter(h *handlers) chi.Router {
 	r := chi.NewRouter()
 
 	r.Post("/add/{type}/{name}", h.postItem())
 	r.Get("/get/{name}", h.getItem())
 	r.Delete("/del/{name}", h.delItem())
+	r.Post("/register/{login}/{password}", h.registerUser())
+	r.Post("/auth/{login}/{password}", h.authUser())
 
 	return r
 }
