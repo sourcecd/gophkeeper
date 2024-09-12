@@ -37,7 +37,21 @@ message SyncPullResponse {
     repeated Data data = 1;
 }
 
+message AuthRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message AuthResponse {
+    string token = 1;
+}
+
 service Sync {
     rpc Push(SyncPushRequest) returns (SyncPushResponse);
     rpc Pull(SyncPullRequest) returns (SyncPullResponse);
+}
+
+service User {
+    rpc RegisterUser(AuthRequest) returns (AuthResponse);
+    rpc AuthUser(AuthRequest) returns (AuthResponse);
 }

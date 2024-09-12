@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/sourcecd/gophkeeper/internal/auth"
 	"github.com/sourcecd/gophkeeper/internal/options"
 	"github.com/sourcecd/gophkeeper/internal/storage"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
@@ -48,7 +49,7 @@ func startGrpcServer(addr string, syncServer *SyncServer) error {
 	if err != nil {
 		return err
 	}
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.UnaryInterceptor(auth.JwtInterceptor))
 	keeperproto.RegisterSyncServer(s, syncServer)
 	log.Printf("Starting grpc server on: %s", addr)
 	if err := s.Serve(l); err != nil {

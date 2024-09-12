@@ -4,10 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"log"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"github.com/sourcecd/gophkeeper/internal/auth"
+	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
 )
 
@@ -16,6 +21,8 @@ const (
 	putDataRequest       = "INSERT INTO data (name, type, payload) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING"
 	selectAllDataRequest = "SELECT name, type, payload FROM data"
 	deleteItemRequest    = "DELETE FROM data WHERE name = $1"
+	createUserRequest    = "INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id"
+	getUserRequest       = "SELECT id, login, password FROM users WHERE login = $1"
 )
 
 //go:embed migrations/*.sql
@@ -26,6 +33,8 @@ type PgDB struct {
 	stmtPutDataRequest       *sql.Stmt
 	stmtSelectAllDataRequest *sql.Stmt
 	stmtDeleteItemRequest    *sql.Stmt
+	stmtCreateUserRequest    *sql.Stmt
+	stmtGetUserRequest       *sql.Stmt
 }
 
 func NewPgDB(dsn string) (*PgDB, error) {
@@ -49,6 +58,17 @@ func (pg *PgDB) PrepStmt() error {
 		return err
 	}
 	pg.stmtDeleteItemRequest, err = pg.db.Prepare(deleteItemRequest)
+	if err != nil {
+		return err
+	}
+	pg.stmtCreateUserRequest, err = pg.db.Prepare(createUserRequest)
+	if err != nil {
+		return err
+	}
+	pg.stmtGetUserRequest, err = pg.db.Prepare(getUserRequest)
+	if err != nil {
+		return err
+	}
 	log.Println("requests prepared")
 	return nil
 }
@@ -117,12 +137,34 @@ func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperprot
 	return nil
 }
 
-func (pg *PgDB) RegisterUser() error {
+func (pg *PgDB) RegisterUser(ctx context.Context, reg *auth.User, userid *int64) error {
+	err := pg.stmtCreateUserRequest.QueryRowContext(ctx, reg.Username, reg.HashedPassword).Scan(userid)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			return fixederrors.ErrUserAlreadyExists
+		}
+		return err
+	}
 	return nil
 }
 
-func (pg *PgDB) AuthUser() error {
-	return nil
+func (pg *PgDB) AuthUser(ctx context.Context, reg *auth.User, userid *int64) error {
+	var (
+		login,
+		password string
+	)
+	row := pg.stmtGetUserRequest.QueryRowContext(ctx, reg.Username)
+	if err := row.Scan(&userid, &login, &password); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fixederrors.ErrUserNotExists
+		}
+		return err
+	}
+	if reg.HashedPassword == password {
+		return nil
+	}
+	return fixederrors.ErrUserNotExists
 }
 
 func PgBaseInit(ctx context.Context, dsn string) (*PgDB, error) {
