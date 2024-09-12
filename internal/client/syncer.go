@@ -11,7 +11,7 @@ import (
 )
 
 func registerUser(ctx context.Context, conn *grpc.ClientConn, login, password string, token *string) error {
-	c := keeperproto.NewUserClient(conn)
+	c := keeperproto.NewSyncClient(conn)
 
 	resp, err := c.RegisterUser(ctx, &keeperproto.AuthRequest{
 		Login:    login,
@@ -20,12 +20,12 @@ func registerUser(ctx context.Context, conn *grpc.ClientConn, login, password st
 	if err != nil {
 		return err
 	}
-	token = &resp.Token
+	*token = resp.Token
 	return nil
 }
 
 func authUser(ctx context.Context, conn *grpc.ClientConn, login, password string, token *string) error {
-	c := keeperproto.NewUserClient(conn)
+	c := keeperproto.NewSyncClient(conn)
 
 	resp, err := c.AuthUser(ctx, &keeperproto.AuthRequest{
 		Login:    login,
@@ -34,7 +34,7 @@ func authUser(ctx context.Context, conn *grpc.ClientConn, login, password string
 	if err != nil {
 		return err
 	}
-	token = &resp.Token
+	*token = resp.Token
 	return nil
 }
 

@@ -1,15 +1,17 @@
 package auth
 
 import (
-	"context"
+	// "context"
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
+	// "google.golang.org/grpc"
+	// "google.golang.org/grpc/metadata"
 )
+
+const tokenDuration = 12 * time.Hour
 
 type User struct {
 	Username       string
@@ -18,7 +20,7 @@ type User struct {
 
 type UserClaims struct {
 	jwt.RegisteredClaims
-	Username string
+	UserID int64
 }
 
 type JWTManager struct {
@@ -26,7 +28,7 @@ type JWTManager struct {
 	tokenDuration time.Duration
 }
 
-func PrepareUser(username string, password string) (*User, error) {
+func (jwtm *JWTManager) PrepareUser(username string, password string) (*User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("cannot hash password: %w", err)
@@ -45,16 +47,16 @@ func (user *User) IsCorrectPassword(password string) bool {
 	return err == nil
 }
 
-func NewJWTManager(secretKey string, tokenDuration time.Duration) *JWTManager {
+func NewJWTManager(secretKey string) *JWTManager {
 	return &JWTManager{secretKey, tokenDuration}
 }
 
-func (manager *JWTManager) Generate(user *User) (string, error) {
+func (manager *JWTManager) Generate(userid int64) (string, error) {
 	claims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(manager.tokenDuration)),
 		},
-		Username: user.Username,
+		UserID: userid,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -87,9 +89,9 @@ func (manager *JWTManager) Verify(accessToken string) (*UserClaims, error) {
 	return claims, nil
 }
 
-func JwtInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+/*func JwtInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	ctx = metadata.NewOutgoingContext(ctx, map[string][]string{
 		"token": {"test"},
 	})
 	return handler(ctx, req)
-}
+}*/

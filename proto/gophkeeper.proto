@@ -49,9 +49,6 @@ message AuthResponse {
 service Sync {
     rpc Push(SyncPushRequest) returns (SyncPushResponse);
     rpc Pull(SyncPullRequest) returns (SyncPullResponse);
-}
-
-service User {
     rpc RegisterUser(AuthRequest) returns (AuthResponse);
     rpc AuthUser(AuthRequest) returns (AuthResponse);
 }

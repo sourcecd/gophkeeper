@@ -15,10 +15,30 @@ import (
 type SyncServer struct {
 	keeperproto.UnimplementedSyncServer
 	store storage.ServerStorage
+	jwtm  *auth.JWTManager
 }
 
-func NewSyncServer(db storage.ServerStorage) *SyncServer {
-	return &SyncServer{store: db}
+func NewSyncServer(db storage.ServerStorage, jwtm *auth.JWTManager) *SyncServer {
+	return &SyncServer{store: db, jwtm: jwtm}
+}
+
+// TODO move jwt to ???
+func (s *SyncServer) RegisterUser(ctx context.Context, in *keeperproto.AuthRequest) (*keeperproto.AuthResponse, error) {
+	var userid int64
+	user, err := s.jwtm.PrepareUser(in.Login, in.Password)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.store.RegisterUser(ctx, user, &userid); err != nil {
+		return nil, err
+	}
+	token, err := s.jwtm.Generate(userid)
+	if err != nil {
+		return nil, err
+	}
+	return &keeperproto.AuthResponse{
+		Token: token,
+	}, nil
 }
 
 func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) (*keeperproto.SyncPushResponse, error) {
@@ -49,7 +69,7 @@ func startGrpcServer(addr string, syncServer *SyncServer) error {
 	if err != nil {
 		return err
 	}
-	s := grpc.NewServer(grpc.UnaryInterceptor(auth.JwtInterceptor))
+	s := grpc.NewServer()
 	keeperproto.RegisterSyncServer(s, syncServer)
 	log.Printf("Starting grpc server on: %s", addr)
 	if err := s.Serve(l); err != nil {
@@ -64,7 +84,7 @@ func Run(ctx context.Context, opt *options.ServerOptions) {
 		log.Fatal(err)
 	}
 
-	if err := startGrpcServer(opt.GrpcAddr, NewSyncServer(db)); err != nil {
+	if err := startGrpcServer(opt.GrpcAddr, NewSyncServer(db, auth.NewJWTManager(opt.SecurityKey))); err != nil {
 		log.Fatal(err)
 	}
 }
