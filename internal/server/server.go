@@ -6,16 +6,35 @@ import (
 	"net"
 
 	"github.com/sourcecd/gophkeeper/internal/auth"
+	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
 	"github.com/sourcecd/gophkeeper/internal/options"
 	"github.com/sourcecd/gophkeeper/internal/storage"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 type SyncServer struct {
 	keeperproto.UnimplementedSyncServer
 	store storage.ServerStorage
 	jwtm  *auth.JWTManager
+}
+
+func (s *SyncServer) checkToken(ctx context.Context, userid *int64) error {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return fixederrors.ErrInvalidToken
+	}
+	mdToken := md["token"]
+	if len(mdToken) == 0 {
+		return fixederrors.ErrInvalidToken
+	}
+	clm, err := s.jwtm.Verify(mdToken[0])
+	if err != nil {
+		return err
+	}
+	*userid = clm.UserID
+	return nil
 }
 
 func NewSyncServer(db storage.ServerStorage, jwtm *auth.JWTManager) *SyncServer {
@@ -61,7 +80,11 @@ func (s *SyncServer) AuthUser(ctx context.Context, in *keeperproto.AuthRequest) 
 }
 
 func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) (*keeperproto.SyncPushResponse, error) {
-	if err := s.store.SyncPut(ctx, in.Data); err != nil {
+	var userid int64
+	if err := s.checkToken(ctx, &userid); err != nil {
+		return nil, err
+	}
+	if err := s.store.SyncPut(ctx, in.Data, userid); err != nil {
 		return &keeperproto.SyncPushResponse{
 			Error: err.Error(),
 		}, err

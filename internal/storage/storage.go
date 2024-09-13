@@ -10,7 +10,7 @@ import (
 type ServerStorage interface {
 	RegisterUser(ctx context.Context, reg *auth.User, userid *int64) error
 	AuthUser(ctx context.Context, reg *auth.User, userid *int64) error
-	SyncPut(ctx context.Context, data []*keeperproto.Data) error
+	SyncPut(ctx context.Context, data []*keeperproto.Data, userid int64) error
 	SyncGet(ctx context.Context, names []string, data *[]*keeperproto.Data) error
 }
 

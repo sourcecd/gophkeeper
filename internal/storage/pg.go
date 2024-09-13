@@ -18,9 +18,9 @@ import (
 
 const (
 	// TODO remove on conflict
-	putDataRequest       = "INSERT INTO data (name, type, payload) VALUES ($1, $2, $3)"
+	putDataRequest       = "INSERT INTO data (id, name, type, payload) VALUES ($1, $2, $3, $4)"
 	selectAllDataRequest = "SELECT name, type, payload FROM data"
-	deleteItemRequest    = "DELETE FROM data WHERE name = $1"
+	deleteItemRequest    = "DELETE FROM data WHERE id = $1 AND name = $2"
 	createUserRequest    = "INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id"
 	getUserRequest       = "SELECT id, login, password FROM users WHERE login = $1"
 )
@@ -87,10 +87,18 @@ func (pg *PgDB) CreateDatabaseScheme(ctx context.Context) error {
 	return nil
 }
 
-func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data) error {
+func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data, userid int64) error {
 	if len(data) == 1 && data[0].Optype == keeperproto.Data_OpType(keeperproto.Data_OpType_value["DELETE"]) {
-		if _, err := pg.stmtDeleteItemRequest.ExecContext(ctx, data[0].Name); err != nil {
+		res, err := pg.stmtDeleteItemRequest.ExecContext(ctx, userid, data[0].Name)
+		if err != nil {
 			return err
+		}
+		r, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if r == 0 {
+			return fixederrors.ErrRecordNotFound
 		}
 		return nil
 	}
@@ -100,7 +108,11 @@ func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data) error {
 	}
 	defer tx.Rollback()
 	for _, v := range data {
-		if _, err := tx.StmtContext(ctx, pg.stmtPutDataRequest).ExecContext(ctx, v.Name, v.Dtype, v.Payload); err != nil {
+		if _, err := tx.StmtContext(ctx, pg.stmtPutDataRequest).ExecContext(ctx, userid, v.Name, v.Dtype, v.Payload); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+				return fixederrors.ErrRecordAlreadyExists
+			}
 			return err
 		}
 	}

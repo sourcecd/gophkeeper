@@ -8,6 +8,7 @@ import (
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 func registerUser(ctx context.Context, conn *grpc.ClientConn, login, password string, token *string) error {
@@ -38,8 +39,12 @@ func authUser(ctx context.Context, conn *grpc.ClientConn, login, password string
 	return nil
 }
 
-func syncPush(ctx context.Context, conn *grpc.ClientConn, store storage.ClientStorage, data []*keeperproto.Data) error {
+func syncPush(ctx context.Context, conn *grpc.ClientConn, token string, store storage.ClientStorage, data []*keeperproto.Data) error {
 	c := keeperproto.NewSyncClient(conn)
+
+	ctx = metadata.NewOutgoingContext(ctx, metadata.MD{
+		"token": {token},
+	})
 
 	// if need full sync from client store
 	if store != nil {

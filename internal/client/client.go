@@ -32,6 +32,17 @@ func checkTypeValue(r *http.Request) error {
 	return nil
 }
 
+func baseTokenCheck(r *http.Request, token *string) error {
+	authHeader := r.Header.Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer") {
+		if s := strings.Split(authHeader, " "); len(s) == 2 {
+			*token = s[1]
+			return nil
+		}
+	}
+	return fixederrors.ErrInvalidToken
+}
+
 func newHandlers(ctx context.Context, s storage.ClientStorage, conn *grpc.ClientConn) *handlers {
 	return &handlers{
 		store: s,
@@ -42,6 +53,12 @@ func newHandlers(ctx context.Context, s storage.ClientStorage, conn *grpc.Client
 
 func (h *handlers) postItem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var token string
+		if err := baseTokenCheck(r, &token); err != nil {
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
 		if err := checkTypeValue(r); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -55,12 +72,7 @@ func (h *handlers) postItem() http.HandlerFunc {
 		}
 		name := chi.URLParam(r, "name")
 		dtype := strings.ToUpper(chi.URLParam(r, "type"))
-		if err := h.store.PutItem(name, dtype, req); err != nil {
-			slog.Error(err.Error())
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err := syncPush(h.ctx, h.conn, nil, []*keeperproto.Data{
+		if err := syncPush(h.ctx, h.conn, token, nil, []*keeperproto.Data{
 			{
 				Name:    name,
 				Optype:  keeperproto.Data_OpType(keeperproto.Data_OpType_value["ADD"]),
@@ -69,7 +81,12 @@ func (h *handlers) postItem() http.HandlerFunc {
 			},
 		}); err != nil {
 			slog.Error(err.Error())
-			http.Error(w, "error add data to server", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := h.store.PutItem(name, dtype, req); err != nil {
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -95,20 +112,26 @@ func (h *handlers) getItem() http.HandlerFunc {
 
 func (h *handlers) delItem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		n := chi.URLParam(r, "name")
-		if err := h.store.DelItem(n); err != nil {
+		var token string
+		if err := baseTokenCheck(r, &token); err != nil {
 			slog.Error(err.Error())
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		if err := syncPush(h.ctx, h.conn, nil, []*keeperproto.Data{
+		n := chi.URLParam(r, "name")
+		if err := syncPush(h.ctx, h.conn, token, nil, []*keeperproto.Data{
 			{
 				Name:   n,
 				Optype: keeperproto.Data_OpType(keeperproto.Data_OpType_value["DELETE"]),
 			},
 		}); err != nil {
 			slog.Error(err.Error())
-			http.Error(w, "error when delete data from server", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := h.store.DelItem(n); err != nil {
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
