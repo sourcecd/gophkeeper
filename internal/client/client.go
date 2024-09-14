@@ -74,7 +74,7 @@ func (h *handlers) postItem() http.HandlerFunc {
 		name := chi.URLParam(r, "name")
 		dtype := strings.ToUpper(chi.URLParam(r, "type"))
 
-		parsedData, err := dataparser.Dataparser(dtype, req).Get()
+		parsedData, err := dataparser.Dataparser(dtype, req).Parse()
 		if err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)

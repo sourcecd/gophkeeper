@@ -117,7 +117,8 @@ func startGrpcServer(addr string, syncServer *SyncServer) error {
 	if err != nil {
 		return err
 	}
-	s := grpc.NewServer()
+	// TODO make stream
+	s := grpc.NewServer(grpc.MaxRecvMsgSize(500000000))
 	keeperproto.RegisterSyncServer(s, syncServer)
 	log.Printf("Starting grpc server on: %s", addr)
 	if err := s.Serve(l); err != nil {

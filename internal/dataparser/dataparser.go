@@ -6,7 +6,7 @@ import (
 )
 
 type ParsedData interface {
-	Get() ([]byte, error)
+	Parse() ([]byte, error)
 }
 
 type parsedText struct {
@@ -43,19 +43,19 @@ func NewCredentialsParser(b []byte) *parsedCredentials {
 	}
 }
 
-func (p *parsedText) Get() ([]byte, error) {
+func (p *parsedText) Parse() ([]byte, error) {
 	return p.b, nil
 }
-func (p *parsedCard) Get() ([]byte, error) {
+func (p *parsedCard) Parse() ([]byte, error) {
 	if !govalidator.IsCreditCard(string(p.b)) {
 		return nil, fixederrors.ErrInvalidCreditCard
 	}
 	return p.b, nil
 }
-func (p *parsedBin) Get() ([]byte, error) {
+func (p *parsedBin) Parse() ([]byte, error) {
 	return p.b, nil
 }
-func (p *parsedCredentials) Get() ([]byte, error) {
+func (p *parsedCredentials) Parse() ([]byte, error) {
 	return p.b, nil
 }
 

@@ -90,7 +90,9 @@ func syncPull(ctx context.Context, conn *grpc.ClientConn, token string, store st
 }
 
 func grpcConn(addr string) (*grpc.ClientConn, error) {
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		// TODO make stream
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(500000000)))
 	if err != nil {
 		return nil, err
 	}
