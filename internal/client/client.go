@@ -11,6 +11,7 @@ import (
 	// "time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/sourcecd/gophkeeper/internal/dataparser"
 	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
 	"github.com/sourcecd/gophkeeper/internal/options"
 	"github.com/sourcecd/gophkeeper/internal/storage"
@@ -72,12 +73,20 @@ func (h *handlers) postItem() http.HandlerFunc {
 		}
 		name := chi.URLParam(r, "name")
 		dtype := strings.ToUpper(chi.URLParam(r, "type"))
+
+		parsedData, err := dataparser.Dataparser(dtype, req).Get()
+		if err != nil {
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		if err := syncPush(h.ctx, h.conn, token, nil, []*keeperproto.Data{
 			{
 				Name:    name,
 				Optype:  keeperproto.Data_OpType(keeperproto.Data_OpType_value["ADD"]),
 				Dtype:   keeperproto.Data_DType(keeperproto.Data_DType_value[dtype]),
-				Payload: req,
+				Payload: parsedData,
 			},
 		}); err != nil {
 			slog.Error(err.Error())

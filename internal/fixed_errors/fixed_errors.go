@@ -11,4 +11,5 @@ var (
 	ErrInvalidToken        = errors.New("invalid token")
 	ErrRecordAlreadyExists = errors.New("item already exist")
 	ErrRecordNotFound      = errors.New("record not found")
+	ErrInvalidCreditCard   = errors.New("wrong credit card number")
 )
