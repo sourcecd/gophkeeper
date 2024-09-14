@@ -96,8 +96,14 @@ func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) 
 }
 
 func (s *SyncServer) Pull(ctx context.Context, in *keeperproto.SyncPullRequest) (*keeperproto.SyncPullResponse, error) {
-	var data []*keeperproto.Data
-	if err := s.store.SyncGet(ctx, in.Name, &data); err != nil {
+	var (
+		data   []*keeperproto.Data
+		userid int64
+	)
+	if err := s.checkToken(ctx, &userid); err != nil {
+		return nil, err
+	}
+	if err := s.store.SyncGet(ctx, in.Name, &data, userid); err != nil {
 		return nil, err
 	}
 	log.Printf("Synced records to client: %d", len(data))

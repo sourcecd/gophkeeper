@@ -67,8 +67,13 @@ func syncPush(ctx context.Context, conn *grpc.ClientConn, token string, store st
 	return nil
 }
 
-func syncPull(ctx context.Context, conn *grpc.ClientConn, store storage.ClientStorage) error {
+func syncPull(ctx context.Context, conn *grpc.ClientConn, token string, store storage.ClientStorage) error {
 	c := keeperproto.NewSyncClient(conn)
+
+	ctx = metadata.NewOutgoingContext(ctx, metadata.MD{
+		"token": {token},
+	})
+
 	resp, err := c.Pull(ctx, &keeperproto.SyncPullRequest{
 		Name: []string{},
 	})

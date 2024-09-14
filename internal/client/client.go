@@ -146,7 +146,7 @@ func (h *handlers) registerUser() http.HandlerFunc {
 		password := chi.URLParam(r, "password")
 
 		if err := registerUser(h.ctx, h.conn, login, password, &token); err != nil {
-			slog.Info(err.Error())
+			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -163,7 +163,13 @@ func (h *handlers) authUser() http.HandlerFunc {
 		password := chi.URLParam(r, "password")
 
 		if err := authUser(h.ctx, h.conn, login, password, &token); err != nil {
-			slog.Info(err.Error())
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		if err := syncPull(h.ctx, h.conn, token, h.store); err != nil {
+			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -192,11 +198,6 @@ func Run(ctx context.Context, opt *options.ClientOptions) {
 		log.Fatal(err)
 	}
 	defer conn.Close()
-
-	err = syncPull(ctx, conn, inmemory)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	h := newHandlers(ctx, inmemory, conn)
 	log.Printf("Starting http server: %s", opt.HttpAddr)

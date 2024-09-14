@@ -18,7 +18,7 @@ import (
 
 const (
 	putDataRequest       = "INSERT INTO data (id, name, type, payload) VALUES ($1, $2, $3, $4)"
-	selectAllDataRequest = "SELECT name, type, payload FROM data"
+	selectAllDataRequest = "SELECT name, type, payload FROM data WHERE id = $1"
 	deleteItemRequest    = "DELETE FROM data WHERE id = $1 AND name = $2"
 	createUserRequest    = "INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id"
 	getUserRequest       = "SELECT id, login, password FROM users WHERE login = $1"
@@ -118,14 +118,14 @@ func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data, userid in
 	return tx.Commit()
 }
 
-func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperproto.Data) error {
+func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperproto.Data, userid int64) error {
 	var (
 		name    string
 		vType   string
 		payload []byte
 	)
 	if len(names) == 0 {
-		rows, err := pg.stmtSelectAllDataRequest.QueryContext(ctx)
+		rows, err := pg.stmtSelectAllDataRequest.QueryContext(ctx, userid)
 		if err != nil {
 			return err
 		}
