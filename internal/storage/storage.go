@@ -17,7 +17,7 @@ type ServerStorage interface {
 type ClientStorage interface {
 	SyncPut(protodata []*keeperproto.Data) error
 	SyncGet(protodata *[]*keeperproto.Data) error
-	PutItem(name, vType string, value []byte) error
+	PutItem(name, vType string, value []byte, desc string) error
 	GetItem(name string, valueType *string, value *[]byte) error
 	DelItem(name string) error
 }

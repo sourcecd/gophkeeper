@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	putDataRequest       = "INSERT INTO data (id, name, type, payload) VALUES ($1, $2, $3, $4)"
-	selectAllDataRequest = "SELECT name, type, payload FROM data WHERE id = $1"
+	putDataRequest       = "INSERT INTO data (id, name, type, payload, description) VALUES ($1, $2, $3, $4, $5)"
+	selectAllDataRequest = "SELECT name, type, payload, description FROM data WHERE id = $1"
 	deleteItemRequest    = "DELETE FROM data WHERE id = $1 AND name = $2"
 	createUserRequest    = "INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id"
 	getUserRequest       = "SELECT id, login, password FROM users WHERE login = $1"
@@ -107,7 +107,7 @@ func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data, userid in
 	}
 	defer tx.Rollback()
 	for _, v := range data {
-		if _, err := tx.StmtContext(ctx, pg.stmtPutDataRequest).ExecContext(ctx, userid, v.Name, v.Dtype, v.Payload); err != nil {
+		if _, err := tx.StmtContext(ctx, pg.stmtPutDataRequest).ExecContext(ctx, userid, v.Name, v.Dtype, v.Payload, v.Description); err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 				return fixederrors.ErrRecordAlreadyExists
@@ -123,6 +123,7 @@ func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperprot
 		name    string
 		vType   string
 		payload []byte
+		desc    string
 	)
 	if len(names) == 0 {
 		rows, err := pg.stmtSelectAllDataRequest.QueryContext(ctx, userid)
@@ -131,13 +132,14 @@ func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperprot
 		}
 		defer rows.Close()
 		for rows.Next() {
-			if err := rows.Scan(&name, &vType, &payload); err != nil {
+			if err := rows.Scan(&name, &vType, &payload, &desc); err != nil {
 				return err
 			}
 			*data = append(*data, &keeperproto.Data{
-				Name:    name,
-				Dtype:   keeperproto.Data_DType(keeperproto.Data_DType_value[vType]),
-				Payload: payload,
+				Name:        name,
+				Dtype:       keeperproto.Data_DType(keeperproto.Data_DType_value[vType]),
+				Payload:     payload,
+				Description: desc,
 			})
 		}
 		if err := rows.Err(); err != nil {

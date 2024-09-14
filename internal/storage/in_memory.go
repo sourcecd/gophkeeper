@@ -10,6 +10,7 @@ import (
 type valueStore struct {
 	valueType string
 	value     []byte
+	desc      string
 }
 
 type ClientInMemory struct {
@@ -30,6 +31,7 @@ func (c *ClientInMemory) SyncPut(protodata []*keeperproto.Data) error {
 		c.data[v.Name] = valueStore{
 			valueType: v.Dtype.String(),
 			value:     v.Payload,
+			desc:      v.Description,
 		}
 	}
 	return nil
@@ -40,15 +42,16 @@ func (c *ClientInMemory) SyncGet(protodata *[]*keeperproto.Data) error {
 	defer c.RUnlock()
 	for k, v := range c.data {
 		*protodata = append(*protodata, &keeperproto.Data{
-			Name:    k,
-			Dtype:   keeperproto.Data_DType(keeperproto.Data_DType_value[v.valueType]),
-			Payload: v.value,
+			Name:        k,
+			Dtype:       keeperproto.Data_DType(keeperproto.Data_DType_value[v.valueType]),
+			Payload:     v.value,
+			Description: v.desc,
 		})
 	}
 	return nil
 }
 
-func (c *ClientInMemory) PutItem(name, vType string, value []byte) error {
+func (c *ClientInMemory) PutItem(name, vType string, value []byte, desc string) error {
 	c.Lock()
 	defer c.Unlock()
 	if _, ok := c.data[name]; ok {

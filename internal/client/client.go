@@ -73,6 +73,7 @@ func (h *handlers) postItem() http.HandlerFunc {
 		}
 		name := chi.URLParam(r, "name")
 		dtype := strings.ToUpper(chi.URLParam(r, "type"))
+		desc := chi.URLParam(r, "description")
 
 		parsedData, err := dataparser.Dataparser(dtype, req).Parse()
 		if err != nil {
@@ -83,17 +84,18 @@ func (h *handlers) postItem() http.HandlerFunc {
 
 		if err := syncPush(h.ctx, h.conn, token, nil, []*keeperproto.Data{
 			{
-				Name:    name,
-				Optype:  keeperproto.Data_OpType(keeperproto.Data_OpType_value["ADD"]),
-				Dtype:   keeperproto.Data_DType(keeperproto.Data_DType_value[dtype]),
-				Payload: parsedData,
+				Name:        name,
+				Optype:      keeperproto.Data_OpType(keeperproto.Data_OpType_value["ADD"]),
+				Dtype:       keeperproto.Data_DType(keeperproto.Data_DType_value[dtype]),
+				Payload:     parsedData,
+				Description: desc,
 			},
 		}); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if err := h.store.PutItem(name, dtype, req); err != nil {
+		if err := h.store.PutItem(name, dtype, req, desc); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -191,7 +193,7 @@ func (h *handlers) authUser() http.HandlerFunc {
 func chiRouter(h *handlers) chi.Router {
 	r := chi.NewRouter()
 
-	r.Post("/add/{type}/{name}", h.postItem())
+	r.Post("/add/{type}/{name}/{description}", h.postItem())
 	r.Get("/get/{name}", h.getItem())
 	r.Delete("/del/{name}", h.delItem())
 	r.Post("/register/{login}/{password}", h.registerUser())

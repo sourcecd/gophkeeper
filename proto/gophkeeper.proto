@@ -19,6 +19,7 @@ message Data {
     DType dtype = 2;
     OpType optype = 3;
     bytes payload = 4;
+    string description = 5;
 }
 
 message SyncPushRequest {
