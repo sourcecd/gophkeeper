@@ -1,6 +1,7 @@
 package dataparser
 
 import (
+	"strings"
 	"unicode/utf8"
 
 	"github.com/asaskevich/govalidator"
@@ -61,6 +62,12 @@ func (p *parsedBin) Parse() ([]byte, error) {
 	return p.b, nil
 }
 func (p *parsedCredentials) Parse() ([]byte, error) {
+	if !utf8.Valid(p.b) {
+		return nil, fixederrors.ErrInvalidTextFormat
+	}
+	if len(strings.Split(string(p.b), " ")) != 2 {
+		return nil, fixederrors.ErrWrongLoginPasswordFormat
+	}
 	return p.b, nil
 }
 
