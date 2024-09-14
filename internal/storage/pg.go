@@ -17,7 +17,6 @@ import (
 )
 
 const (
-	// TODO remove on conflict
 	putDataRequest       = "INSERT INTO data (id, name, type, payload) VALUES ($1, $2, $3, $4)"
 	selectAllDataRequest = "SELECT name, type, payload FROM data"
 	deleteItemRequest    = "DELETE FROM data WHERE id = $1 AND name = $2"
