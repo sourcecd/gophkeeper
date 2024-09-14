@@ -1,6 +1,8 @@
 package dataparser
 
 import (
+	"unicode/utf8"
+
 	"github.com/asaskevich/govalidator"
 	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
 )
@@ -44,6 +46,9 @@ func NewCredentialsParser(b []byte) *parsedCredentials {
 }
 
 func (p *parsedText) Parse() ([]byte, error) {
+	if !utf8.Valid(p.b) {
+		return nil, fixederrors.ErrInvalidTextFormat
+	}
 	return p.b, nil
 }
 func (p *parsedCard) Parse() ([]byte, error) {

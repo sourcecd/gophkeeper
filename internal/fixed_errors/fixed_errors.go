@@ -12,4 +12,5 @@ var (
 	ErrRecordAlreadyExists = errors.New("item already exist")
 	ErrRecordNotFound      = errors.New("record not found")
 	ErrInvalidCreditCard   = errors.New("wrong credit card number")
+	ErrInvalidTextFormat   = errors.New("invalid text format")
 )

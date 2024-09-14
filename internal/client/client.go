@@ -179,7 +179,7 @@ func (h *handlers) authUser() http.HandlerFunc {
 
 		if err := syncPull(h.ctx, h.conn, token, h.store); err != nil {
 			slog.Error(err.Error())
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
