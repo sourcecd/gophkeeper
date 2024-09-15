@@ -20,4 +20,5 @@ type ClientStorage interface {
 	PutItem(name, vType string, value []byte, desc string) error
 	GetItem(name string, valueType *string, value *[]byte) error
 	DelItem(name string) error
+	ListItems(items *[]ListItems) error
 }

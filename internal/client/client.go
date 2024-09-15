@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -42,6 +43,14 @@ func baseTokenCheck(r *http.Request, token *string) error {
 		}
 	}
 	return fixederrors.ErrInvalidToken
+}
+
+func itemsStringView(items []storage.ListItems) string {
+	s := "Name | Type | Description\n--------------------------\n"
+	for _, v := range items {
+		s += fmt.Sprintf("%s | %s | %s\n", v.Name, v.DType, v.Desc)
+	}
+	return s
 }
 
 func newHandlers(ctx context.Context, s storage.ClientStorage, conn *grpc.ClientConn) *handlers {
@@ -190,6 +199,22 @@ func (h *handlers) authUser() http.HandlerFunc {
 	}
 }
 
+func (h *handlers) listAll() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var listItems []storage.ListItems
+		if err := h.store.ListItems(&listItems); err != nil {
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		s := itemsStringView(listItems)
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(s + "\n"))
+	}
+}
+
 func chiRouter(h *handlers) chi.Router {
 	r := chi.NewRouter()
 
@@ -198,6 +223,7 @@ func chiRouter(h *handlers) chi.Router {
 	r.Delete("/del/{name}", h.delItem())
 	r.Post("/register/{login}/{password}", h.registerUser())
 	r.Post("/auth/{login}/{password}", h.authUser())
+	r.Get("/listall", h.listAll())
 
 	return r
 }

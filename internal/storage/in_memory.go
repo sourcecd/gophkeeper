@@ -13,6 +13,12 @@ type valueStore struct {
 	desc      string
 }
 
+type ListItems struct {
+	Name  string
+	DType string
+	Desc  string
+}
+
 type ClientInMemory struct {
 	sync.RWMutex
 	data map[string]valueStore
@@ -60,6 +66,7 @@ func (c *ClientInMemory) PutItem(name, vType string, value []byte, desc string) 
 	c.data[name] = valueStore{
 		valueType: vType,
 		value:     value,
+		desc:      desc,
 	}
 	return nil
 }
@@ -73,6 +80,19 @@ func (c *ClientInMemory) GetItem(name string, valueType *string, value *[]byte) 
 		return nil
 	}
 	return fixederrors.ErrNoValue
+}
+
+func (c *ClientInMemory) ListItems(items *[]ListItems) error {
+	c.RLock()
+	defer c.RUnlock()
+	for k, v := range c.data {
+		*items = append(*items, ListItems{
+			Name:  k,
+			DType: v.valueType,
+			Desc:  v.desc,
+		})
+	}
+	return nil
 }
 
 func (c *ClientInMemory) DelItem(name string) error {
