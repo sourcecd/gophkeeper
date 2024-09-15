@@ -8,6 +8,9 @@ import (
 )
 
 func main() {
+	// Print Build args
+	printBuildFlags()
+
 	ctx := context.Background()
 	var opt options.ServerOptions
 
