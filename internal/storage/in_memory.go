@@ -7,29 +7,34 @@ import (
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
 )
 
+// struct for save value in-memory
 type valueStore struct {
 	valueType string
 	value     []byte
 	desc      string
 }
 
+// ListItems struct for metainfo
 type ListItems struct {
 	Name  string
 	DType string
 	Desc  string
 }
 
+// ClientInMemory in-memory client storage
 type ClientInMemory struct {
 	sync.RWMutex
 	data map[string]valueStore
 }
 
+// NewInMemory init client in-memory storage
 func NewInMemory() *ClientInMemory {
 	return &ClientInMemory{
 		data: make(map[string]valueStore),
 	}
 }
 
+// SyncPut put data (with server sync) to client in-memory storage
 func (c *ClientInMemory) SyncPut(protodata []*keeperproto.Data) error {
 	c.Lock()
 	defer c.Unlock()
@@ -43,6 +48,7 @@ func (c *ClientInMemory) SyncPut(protodata []*keeperproto.Data) error {
 	return nil
 }
 
+// SyncGet get data (with server sync) from client in-memory storage
 func (c *ClientInMemory) SyncGet(protodata *[]*keeperproto.Data) error {
 	c.RLock()
 	defer c.RUnlock()
@@ -57,6 +63,7 @@ func (c *ClientInMemory) SyncGet(protodata *[]*keeperproto.Data) error {
 	return nil
 }
 
+// PutItem to in-memory client storage (one item)
 func (c *ClientInMemory) PutItem(name, vType string, value []byte, desc string) error {
 	c.Lock()
 	defer c.Unlock()
@@ -71,6 +78,7 @@ func (c *ClientInMemory) PutItem(name, vType string, value []byte, desc string) 
 	return nil
 }
 
+// GetItem from in-memory client storage (one item)
 func (c *ClientInMemory) GetItem(name string, valueType *string, value *[]byte) error {
 	c.RLock()
 	defer c.RUnlock()
@@ -82,6 +90,7 @@ func (c *ClientInMemory) GetItem(name string, valueType *string, value *[]byte) 
 	return fixederrors.ErrNoValue
 }
 
+// ListItems metainfo from in-memory client storage
 func (c *ClientInMemory) ListItems(items *[]ListItems) error {
 	c.RLock()
 	defer c.RUnlock()
@@ -95,6 +104,7 @@ func (c *ClientInMemory) ListItems(items *[]ListItems) error {
 	return nil
 }
 
+// DelItem from in-memory client storage
 func (c *ClientInMemory) DelItem(name string) error {
 	c.Lock()
 	defer c.Unlock()

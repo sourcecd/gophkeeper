@@ -28,6 +28,8 @@ const (
 // SyncClient is the client API for Sync service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Sync service
 type SyncClient interface {
 	Push(ctx context.Context, in *SyncPushRequest, opts ...grpc.CallOption) (*SyncPushResponse, error)
 	Pull(ctx context.Context, in *SyncPullRequest, opts ...grpc.CallOption) (*SyncPullResponse, error)
@@ -86,6 +88,8 @@ func (c *syncClient) AuthUser(ctx context.Context, in *AuthRequest, opts ...grpc
 // SyncServer is the server API for Sync service.
 // All implementations must embed UnimplementedSyncServer
 // for forward compatibility.
+//
+// Sync service
 type SyncServer interface {
 	Push(context.Context, *SyncPushRequest) (*SyncPushResponse, error)
 	Pull(context.Context, *SyncPullRequest) (*SyncPullResponse, error)

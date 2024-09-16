@@ -118,6 +118,7 @@ func (Data_OpType) EnumDescriptor() ([]byte, []int) {
 	return file_proto_gophkeeper_proto_rawDescGZIP(), []int{0, 1}
 }
 
+// Data proto for serialize/deserialize message
 type Data struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -197,6 +198,7 @@ func (x *Data) GetDescription() string {
 	return ""
 }
 
+// SyncPushRequest request for store data
 type SyncPushRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -244,6 +246,7 @@ func (x *SyncPushRequest) GetData() []*Data {
 	return nil
 }
 
+// SyncPushResponse response for SyncPushRequest
 type SyncPushResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -291,6 +294,7 @@ func (x *SyncPushResponse) GetError() string {
 	return ""
 }
 
+// SyncPullRequest request for get data
 type SyncPullRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -338,6 +342,7 @@ func (x *SyncPullRequest) GetName() []string {
 	return nil
 }
 
+// SyncPullResponse response for SyncPullRequest
 type SyncPullResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -385,6 +390,7 @@ func (x *SyncPullResponse) GetData() []*Data {
 	return nil
 }
 
+// AuthRequest for serialize/deserialize auth data
 type AuthRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -440,6 +446,7 @@ func (x *AuthRequest) GetPassword() string {
 	return ""
 }
 
+// AuthResponse response for AuthRequest
 type AuthResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

@@ -16,6 +16,7 @@ import (
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
 )
 
+// sql requests templates
 const (
 	putDataRequest       = "INSERT INTO data (id, name, type, payload, description) VALUES ($1, $2, $3, $4, $5)"
 	selectAllDataRequest = "SELECT name, type, payload, description FROM data WHERE id = $1"
@@ -27,6 +28,7 @@ const (
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
 
+// PgDB struct with db singleton and prepare statements
 type PgDB struct {
 	db                       *sql.DB
 	stmtPutDataRequest       *sql.Stmt
@@ -36,6 +38,7 @@ type PgDB struct {
 	stmtGetUserRequest       *sql.Stmt
 }
 
+// NewPgDB create postgres db instance
 func NewPgDB(dsn string) (*PgDB, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -46,6 +49,7 @@ func NewPgDB(dsn string) (*PgDB, error) {
 	}, nil
 }
 
+// PrepStmt run prepare queries
 func (pg *PgDB) PrepStmt() error {
 	var err error
 	pg.stmtPutDataRequest, err = pg.db.Prepare(putDataRequest)
@@ -72,6 +76,7 @@ func (pg *PgDB) PrepStmt() error {
 	return nil
 }
 
+// CreateDatabaseScheme create tables with migrations
 func (pg *PgDB) CreateDatabaseScheme(ctx context.Context) error {
 	goose.SetBaseFS(embedMigrations)
 
@@ -86,6 +91,7 @@ func (pg *PgDB) CreateDatabaseScheme(ctx context.Context) error {
 	return nil
 }
 
+// SyncPut put data to pg database
 func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data, userid int64) error {
 	if len(data) == 1 && data[0].Optype == keeperproto.Data_OpType(keeperproto.Data_OpType_value["DELETE"]) {
 		res, err := pg.stmtDeleteItemRequest.ExecContext(ctx, userid, data[0].Name)
@@ -118,6 +124,7 @@ func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data, userid in
 	return tx.Commit()
 }
 
+// SyncGet get data from pg database
 func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperproto.Data, userid int64) error {
 	var (
 		name    string
@@ -150,6 +157,7 @@ func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperprot
 	return nil
 }
 
+// RegisterUser put user info to pg database
 func (pg *PgDB) RegisterUser(ctx context.Context, reg *auth.User, userid *int64) error {
 	err := pg.stmtCreateUserRequest.QueryRowContext(ctx, reg.Username, reg.HashedPassword).Scan(userid)
 	if err != nil {
@@ -162,6 +170,7 @@ func (pg *PgDB) RegisterUser(ctx context.Context, reg *auth.User, userid *int64)
 	return nil
 }
 
+// AuthUser get auth info from pg database
 func (pg *PgDB) AuthUser(ctx context.Context, reg *auth.User, userid *int64) error {
 	var (
 		login,
@@ -181,6 +190,7 @@ func (pg *PgDB) AuthUser(ctx context.Context, reg *auth.User, userid *int64) err
 	return fixederrors.ErrUserNotExists
 }
 
+// PgBaseInit main init pg database
 func PgBaseInit(ctx context.Context, dsn string) (*PgDB, error) {
 	db, err := NewPgDB(dsn)
 	if err != nil {

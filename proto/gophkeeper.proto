@@ -4,6 +4,7 @@ package gophkeeper;
 
 option go_package = "github.com/sourcecd/gophkeeper/proto;keeperproto";
 
+// Data proto for serialize/deserialize message
 message Data {
     enum DType {
         CREDENTIALS = 0;
@@ -22,31 +23,38 @@ message Data {
     string description = 5;
 }
 
+// SyncPushRequest request for store data
 message SyncPushRequest {
     repeated Data data = 1;
 }
 
+// SyncPushResponse response for SyncPushRequest
 message SyncPushResponse {
     string Error = 1;
 }
 
+// SyncPullRequest request for get data
 message SyncPullRequest {
     repeated string name = 1;
 }
 
+// SyncPullResponse response for SyncPullRequest
 message SyncPullResponse {
     repeated Data data = 1;
 }
 
+// AuthRequest for serialize/deserialize auth data
 message AuthRequest {
     string login = 1;
     string password = 2;
 }
 
+// AuthResponse response for AuthRequest
 message AuthResponse {
     string token = 1;
 }
 
+// Sync service
 service Sync {
     rpc Push(SyncPushRequest) returns (SyncPushResponse);
     rpc Pull(SyncPullRequest) returns (SyncPullResponse);

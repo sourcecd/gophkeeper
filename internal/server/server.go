@@ -1,3 +1,4 @@
+// Package server with grpc transport for client
 package server
 
 import (
@@ -14,12 +15,14 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// SyncServer main grpc protocol struct
 type SyncServer struct {
 	keeperproto.UnimplementedSyncServer
 	store storage.ServerStorage
 	jwtm  *auth.JWTManager
 }
 
+// check and unpack jwt token
 func (s *SyncServer) checkToken(ctx context.Context, userid *int64) error {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -37,11 +40,12 @@ func (s *SyncServer) checkToken(ctx context.Context, userid *int64) error {
 	return nil
 }
 
+// NewSyncServer create server instance
 func NewSyncServer(db storage.ServerStorage, jwtm *auth.JWTManager) *SyncServer {
 	return &SyncServer{store: db, jwtm: jwtm}
 }
 
-// TODO move jwt to ???
+// RegisterUser server grpc method for register user
 func (s *SyncServer) RegisterUser(ctx context.Context, in *keeperproto.AuthRequest) (*keeperproto.AuthResponse, error) {
 	var userid int64
 	user, err := s.jwtm.PrepareUser(in.Login, in.Password)
@@ -60,7 +64,7 @@ func (s *SyncServer) RegisterUser(ctx context.Context, in *keeperproto.AuthReque
 	}, nil
 }
 
-// TODO move jwt to ???
+// AuthUser server grpc method for authorize user
 func (s *SyncServer) AuthUser(ctx context.Context, in *keeperproto.AuthRequest) (*keeperproto.AuthResponse, error) {
 	var userid int64
 	if err := s.store.AuthUser(ctx, &auth.User{
@@ -79,6 +83,7 @@ func (s *SyncServer) AuthUser(ctx context.Context, in *keeperproto.AuthRequest) 
 	}, nil
 }
 
+// Push data to server storage
 func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) (*keeperproto.SyncPushResponse, error) {
 	var userid int64
 	if err := s.checkToken(ctx, &userid); err != nil {
@@ -95,6 +100,7 @@ func (s *SyncServer) Push(ctx context.Context, in *keeperproto.SyncPushRequest) 
 	}, nil
 }
 
+// Pull data from server storage
 func (s *SyncServer) Pull(ctx context.Context, in *keeperproto.SyncPullRequest) (*keeperproto.SyncPullResponse, error) {
 	var (
 		data   []*keeperproto.Data
@@ -112,6 +118,7 @@ func (s *SyncServer) Pull(ctx context.Context, in *keeperproto.SyncPullRequest) 
 	}, nil
 }
 
+// grpc server configure
 func startGrpcServer(addr string, syncServer *SyncServer) error {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -127,6 +134,7 @@ func startGrpcServer(addr string, syncServer *SyncServer) error {
 	return nil
 }
 
+// Run server
 func Run(ctx context.Context, opt *options.ServerOptions) {
 	db, err := storage.PgBaseInit(ctx, opt.Dsn)
 	if err != nil {

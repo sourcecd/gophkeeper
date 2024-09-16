@@ -9,6 +9,8 @@ import (
 	"github.com/sourcecd/gophkeeper/internal/options"
 )
 
+// load configuration from cmd line
+// TODO from env too
 func loadConfiguration(opt *options.ServerOptions) {
 	serverFlags(opt)
 	f, err := os.Open(opt.SecurityKeyFile)
@@ -22,6 +24,7 @@ func loadConfiguration(opt *options.ServerOptions) {
 	opt.SecurityKey = string(b)
 }
 
+// server cmdline flags parse
 func serverFlags(opt *options.ServerOptions) {
 	flag.StringVar(&opt.Dsn, "dsn", "dbname=gophkeeper", "dsn for postgres")
 	flag.StringVar(&opt.GrpcAddr, "grpc-addr", "localhost:2135", "listen grpc server address")

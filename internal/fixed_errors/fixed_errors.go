@@ -1,7 +1,9 @@
+// Package fixederrors with custom errors
 package fixederrors
 
 import "errors"
 
+// custom service error types
 var (
 	ErrAlreadyExists            = errors.New("value already exists")
 	ErrNoValue                  = errors.New("value not found")

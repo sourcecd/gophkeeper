@@ -1,3 +1,4 @@
+// Package client for cache and send items
 package client
 
 import (
@@ -20,12 +21,14 @@ import (
 	"google.golang.org/grpc"
 )
 
+// handlers type with methods for REST api
 type handlers struct {
 	store storage.ClientStorage
 	ctx   context.Context
 	conn  *grpc.ClientConn
 }
 
+// validate type of data
 func checkTypeValue(r *http.Request) error {
 	s := chi.URLParam(r, "type")
 	if _, ok := keeperproto.Data_DType_value[strings.ToUpper(s)]; !ok {
@@ -34,6 +37,7 @@ func checkTypeValue(r *http.Request) error {
 	return nil
 }
 
+// check authorization header
 func baseTokenCheck(r *http.Request, token *string) error {
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer") {
@@ -45,6 +49,7 @@ func baseTokenCheck(r *http.Request, token *string) error {
 	return fixederrors.ErrInvalidToken
 }
 
+// format items to string
 func itemsStringView(items []storage.ListItems) string {
 	s := "Name | Type | Description\n--------------------------\n"
 	for _, v := range items {
@@ -53,6 +58,7 @@ func itemsStringView(items []storage.ListItems) string {
 	return s
 }
 
+// create handler instance
 func newHandlers(ctx context.Context, s storage.ClientStorage, conn *grpc.ClientConn) *handlers {
 	return &handlers{
 		store: s,
@@ -61,6 +67,7 @@ func newHandlers(ctx context.Context, s storage.ClientStorage, conn *grpc.Client
 	}
 }
 
+// accept request to client from user and send it to server
 func (h *handlers) postItem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var token string
@@ -91,7 +98,7 @@ func (h *handlers) postItem() http.HandlerFunc {
 			return
 		}
 
-		if err := syncPush(h.ctx, h.conn, token, nil, []*keeperproto.Data{
+		if err := syncPush(h.ctx, h.conn, token, []*keeperproto.Data{
 			{
 				Name:        name,
 				Optype:      keeperproto.Data_OpType(keeperproto.Data_OpType_value["ADD"]),
@@ -114,6 +121,7 @@ func (h *handlers) postItem() http.HandlerFunc {
 	}
 }
 
+// fetch item from client by user request
 func (h *handlers) getItem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var (
@@ -130,6 +138,7 @@ func (h *handlers) getItem() http.HandlerFunc {
 	}
 }
 
+// del item by user request from client and sync delete with server
 func (h *handlers) delItem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var token string
@@ -139,7 +148,7 @@ func (h *handlers) delItem() http.HandlerFunc {
 			return
 		}
 		n := chi.URLParam(r, "name")
-		if err := syncPush(h.ctx, h.conn, token, nil, []*keeperproto.Data{
+		if err := syncPush(h.ctx, h.conn, token, []*keeperproto.Data{
 			{
 				Name:   n,
 				Optype: keeperproto.Data_OpType(keeperproto.Data_OpType_value["DELETE"]),
@@ -159,6 +168,7 @@ func (h *handlers) delItem() http.HandlerFunc {
 	}
 }
 
+// send register user request to server and get jwt token response
 func (h *handlers) registerUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var token string
@@ -176,6 +186,7 @@ func (h *handlers) registerUser() http.HandlerFunc {
 	}
 }
 
+// send auth user request to server and get jwt token response
 func (h *handlers) authUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var token string
@@ -199,6 +210,7 @@ func (h *handlers) authUser() http.HandlerFunc {
 	}
 }
 
+// list all items from client by user request
 func (h *handlers) listAll() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var listItems []storage.ListItems
@@ -215,6 +227,7 @@ func (h *handlers) listAll() http.HandlerFunc {
 	}
 }
 
+// handler router
 func chiRouter(h *handlers) chi.Router {
 	r := chi.NewRouter()
 
@@ -228,6 +241,7 @@ func chiRouter(h *handlers) chi.Router {
 	return r
 }
 
+// Run client daemon
 func Run(ctx context.Context, opt *options.ClientOptions) {
 	inmemory := storage.NewInMemory()
 	conn, err := grpcConn(opt.GrpcAddr)

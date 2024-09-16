@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// send register user grpc request to server
 func registerUser(ctx context.Context, conn *grpc.ClientConn, login, password string, token *string) error {
 	c := keeperproto.NewSyncClient(conn)
 
@@ -25,6 +26,7 @@ func registerUser(ctx context.Context, conn *grpc.ClientConn, login, password st
 	return nil
 }
 
+// send auth user grpc request to server
 func authUser(ctx context.Context, conn *grpc.ClientConn, login, password string, token *string) error {
 	c := keeperproto.NewSyncClient(conn)
 
@@ -39,19 +41,13 @@ func authUser(ctx context.Context, conn *grpc.ClientConn, login, password string
 	return nil
 }
 
-func syncPush(ctx context.Context, conn *grpc.ClientConn, token string, store storage.ClientStorage, data []*keeperproto.Data) error {
+// push data to server by grpc
+func syncPush(ctx context.Context, conn *grpc.ClientConn, token string, data []*keeperproto.Data) error {
 	c := keeperproto.NewSyncClient(conn)
 
 	ctx = metadata.NewOutgoingContext(ctx, metadata.MD{
 		"token": {token},
 	})
-
-	// if need full sync from client store
-	if store != nil {
-		if err := store.SyncGet(&data); err != nil {
-			return err
-		}
-	}
 
 	resp, err := c.Push(ctx, &keeperproto.SyncPushRequest{
 		Data: data,
@@ -67,6 +63,7 @@ func syncPush(ctx context.Context, conn *grpc.ClientConn, token string, store st
 	return nil
 }
 
+// pull data from server by grpc
 func syncPull(ctx context.Context, conn *grpc.ClientConn, token string, store storage.ClientStorage) error {
 	c := keeperproto.NewSyncClient(conn)
 
@@ -89,6 +86,7 @@ func syncPull(ctx context.Context, conn *grpc.ClientConn, token string, store st
 	return nil
 }
 
+// grpc connection to server
 func grpcConn(addr string) (*grpc.ClientConn, error) {
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		// TODO make stream

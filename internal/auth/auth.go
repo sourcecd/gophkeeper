@@ -1,34 +1,36 @@
+// Package auth for authorization support
 package auth
 
 import (
-	// "context"
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
-	// "google.golang.org/grpc"
-	// "google.golang.org/grpc/metadata"
 )
 
 const tokenDuration = 12 * time.Hour
 
+// User struct for work with username and password
 type User struct {
 	Username       string
 	HashedPassword string
 }
 
+// UserClaims main jwt token structure
 type UserClaims struct {
 	jwt.RegisteredClaims
 	UserID int64
 }
 
+// JWTManager configuration for jwt
 type JWTManager struct {
 	secretKey     string
 	tokenDuration time.Duration
 }
 
-func (jwtm *JWTManager) PrepareUser(username string, password string) (*User, error) {
+// PrepareUser method for prepare password hash
+func (manager *JWTManager) PrepareUser(username string, password string) (*User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("cannot hash password: %w", err)
@@ -42,15 +44,18 @@ func (jwtm *JWTManager) PrepareUser(username string, password string) (*User, er
 	return user, nil
 }
 
+// IsCorrectPassword compare password with hash
 func (user *User) IsCorrectPassword(passwordrealhashed string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(passwordrealhashed), []byte(user.HashedPassword))
 	return err == nil
 }
 
+// NewJWTManager create jwt instance
 func NewJWTManager(secretKey string) *JWTManager {
 	return &JWTManager{secretKey, tokenDuration}
 }
 
+// Generate jwt token
 func (manager *JWTManager) Generate(userid int64) (string, error) {
 	claims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -63,6 +68,7 @@ func (manager *JWTManager) Generate(userid int64) (string, error) {
 	return token.SignedString([]byte(manager.secretKey))
 }
 
+// Verify jwt, unpack and extract parameters
 func (manager *JWTManager) Verify(accessToken string) (*UserClaims, error) {
 	token, err := jwt.ParseWithClaims(
 		accessToken,
@@ -88,10 +94,3 @@ func (manager *JWTManager) Verify(accessToken string) (*UserClaims, error) {
 
 	return claims, nil
 }
-
-/*func JwtInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	ctx = metadata.NewOutgoingContext(ctx, map[string][]string{
-		"token": {"test"},
-	})
-	return handler(ctx, req)
-}*/
