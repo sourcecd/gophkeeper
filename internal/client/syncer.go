@@ -20,11 +20,25 @@ import (
 //go:embed certs/ca.crt
 var embedCerts embed.FS
 
-// send register user grpc request to server
-func registerUser(ctx context.Context, conn *grpc.ClientConn, login, password string, token *string) error {
-	c := keeperproto.NewSyncClient(conn)
+type SyncClient struct {
+	ctx   context.Context
+	conn  *grpc.ClientConn
+	store storage.ClientStorage
+}
 
-	resp, err := c.RegisterUser(ctx, &keeperproto.AuthRequest{
+func NewSyncClient(ctx context.Context, conn *grpc.ClientConn, store storage.ClientStorage) *SyncClient {
+	return &SyncClient{
+		ctx:   ctx,
+		conn:  conn,
+		store: store,
+	}
+}
+
+// RegisterUser send register user grpc request to server
+func (sy *SyncClient) RegisterUser(login, password string, token *string) error {
+	c := keeperproto.NewSyncClient(sy.conn)
+
+	resp, err := c.RegisterUser(sy.ctx, &keeperproto.AuthRequest{
 		Login:    login,
 		Password: password,
 	})
@@ -35,11 +49,11 @@ func registerUser(ctx context.Context, conn *grpc.ClientConn, login, password st
 	return nil
 }
 
-// send auth user grpc request to server
-func authUser(ctx context.Context, conn *grpc.ClientConn, login, password string, token *string) error {
-	c := keeperproto.NewSyncClient(conn)
+// AuthUser send auth user grpc request to server
+func (sy *SyncClient) AuthUser(login, password string, token *string) error {
+	c := keeperproto.NewSyncClient(sy.conn)
 
-	resp, err := c.AuthUser(ctx, &keeperproto.AuthRequest{
+	resp, err := c.AuthUser(sy.ctx, &keeperproto.AuthRequest{
 		Login:    login,
 		Password: password,
 	})
@@ -50,11 +64,11 @@ func authUser(ctx context.Context, conn *grpc.ClientConn, login, password string
 	return nil
 }
 
-// push data to server by grpc
-func syncPush(ctx context.Context, conn *grpc.ClientConn, token string, data []*keeperproto.Data) error {
-	c := keeperproto.NewSyncClient(conn)
+// SyncPush push data to server by grpc
+func (sy *SyncClient) SyncPush(token string, data []*keeperproto.Data) error {
+	c := keeperproto.NewSyncClient(sy.conn)
 
-	ctx = metadata.NewOutgoingContext(ctx, metadata.MD{
+	ctx := metadata.NewOutgoingContext(sy.ctx, metadata.MD{
 		"token": {token},
 	})
 
@@ -72,11 +86,11 @@ func syncPush(ctx context.Context, conn *grpc.ClientConn, token string, data []*
 	return nil
 }
 
-// pull data from server by grpc
-func syncPull(ctx context.Context, conn *grpc.ClientConn, token string, store storage.ClientStorage) error {
-	c := keeperproto.NewSyncClient(conn)
+// SyncPull pull data from server by grpc
+func (sy *SyncClient) SyncPull(token string) error {
+	c := keeperproto.NewSyncClient(sy.conn)
 
-	ctx = metadata.NewOutgoingContext(ctx, metadata.MD{
+	ctx := metadata.NewOutgoingContext(sy.ctx, metadata.MD{
 		"token": {token},
 	})
 
@@ -87,7 +101,7 @@ func syncPull(ctx context.Context, conn *grpc.ClientConn, token string, store st
 		return err
 	}
 
-	if err := store.SyncPut(resp.Data); err != nil {
+	if err := sy.store.SyncPut(resp.Data); err != nil {
 		return err
 	}
 	log.Printf("Synced records from server: %d", len(resp.Data))

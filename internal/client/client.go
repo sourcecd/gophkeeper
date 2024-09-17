@@ -18,14 +18,11 @@ import (
 	"github.com/sourcecd/gophkeeper/internal/options"
 	"github.com/sourcecd/gophkeeper/internal/storage"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
-	"google.golang.org/grpc"
 )
 
 // handlers type with methods for REST api
 type handlers struct {
-	store storage.ClientStorage
-	ctx   context.Context
-	conn  *grpc.ClientConn
+	syClient *SyncClient
 }
 
 // validate type of data
@@ -59,11 +56,9 @@ func itemsStringView(items []storage.ListItems) string {
 }
 
 // create handler instance
-func newHandlers(ctx context.Context, s storage.ClientStorage, conn *grpc.ClientConn) *handlers {
+func newHandlers(syclient *SyncClient) *handlers {
 	return &handlers{
-		store: s,
-		ctx:   ctx,
-		conn:  conn,
+		syClient: syclient,
 	}
 }
 
@@ -98,7 +93,7 @@ func (h *handlers) postItem() http.HandlerFunc {
 			return
 		}
 
-		if err := syncPush(h.ctx, h.conn, token, []*keeperproto.Data{
+		if err := h.syClient.SyncPush(token, []*keeperproto.Data{
 			{
 				Name:        name,
 				Optype:      keeperproto.Data_OpType(keeperproto.Data_OpType_value["ADD"]),
@@ -111,7 +106,7 @@ func (h *handlers) postItem() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if err := h.store.PutItem(name, dtype, req, desc); err != nil {
+		if err := h.syClient.store.PutItem(name, dtype, req, desc); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -128,7 +123,7 @@ func (h *handlers) getItem() http.HandlerFunc {
 			valType string
 			val     []byte
 		)
-		if err := h.store.GetItem(chi.URLParam(r, "name"), &valType, &val); err != nil {
+		if err := h.syClient.store.GetItem(chi.URLParam(r, "name"), &valType, &val); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -148,7 +143,7 @@ func (h *handlers) delItem() http.HandlerFunc {
 			return
 		}
 		n := chi.URLParam(r, "name")
-		if err := syncPush(h.ctx, h.conn, token, []*keeperproto.Data{
+		if err := h.syClient.SyncPush(token, []*keeperproto.Data{
 			{
 				Name:   n,
 				Optype: keeperproto.Data_OpType(keeperproto.Data_OpType_value["DELETE"]),
@@ -158,7 +153,7 @@ func (h *handlers) delItem() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if err := h.store.DelItem(n); err != nil {
+		if err := h.syClient.store.DelItem(n); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -175,7 +170,7 @@ func (h *handlers) registerUser() http.HandlerFunc {
 		login := chi.URLParam(r, "login")
 		password := chi.URLParam(r, "password")
 
-		if err := registerUser(h.ctx, h.conn, login, password, &token); err != nil {
+		if err := h.syClient.RegisterUser(login, password, &token); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -193,13 +188,13 @@ func (h *handlers) authUser() http.HandlerFunc {
 		login := chi.URLParam(r, "login")
 		password := chi.URLParam(r, "password")
 
-		if err := authUser(h.ctx, h.conn, login, password, &token); err != nil {
+		if err := h.syClient.AuthUser(login, password, &token); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
-		if err := syncPull(h.ctx, h.conn, token, h.store); err != nil {
+		if err := h.syClient.SyncPull(token); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -214,7 +209,7 @@ func (h *handlers) authUser() http.HandlerFunc {
 func (h *handlers) listAll() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var listItems []storage.ListItems
-		if err := h.store.ListItems(&listItems); err != nil {
+		if err := h.syClient.store.ListItems(&listItems); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -250,7 +245,9 @@ func Run(ctx context.Context, opt *options.ClientOptions) {
 	}
 	defer conn.Close()
 
-	h := newHandlers(ctx, inmemory, conn)
+	sClient := NewSyncClient(ctx, conn, inmemory)
+	h := newHandlers(sClient)
+
 	log.Printf("Starting http server: %s", opt.HttpAddr)
 	if err := http.ListenAndServe(opt.HttpAddr, chiRouter(h)); err != nil {
 		log.Fatal(err)
