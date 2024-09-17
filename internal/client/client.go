@@ -244,7 +244,7 @@ func chiRouter(h *handlers) chi.Router {
 // Run client daemon
 func Run(ctx context.Context, opt *options.ClientOptions) {
 	inmemory := storage.NewInMemory()
-	conn, err := grpcConn(opt.GrpcAddr)
+	conn, err := grpcConn(opt.GrpcAddr, opt.CAfile)
 	if err != nil {
 		log.Fatal(err)
 	}

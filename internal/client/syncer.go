@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"embed"
 	"log"
+	"os"
 
 	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
 	"github.com/sourcecd/gophkeeper/internal/storage"
@@ -95,10 +96,17 @@ func syncPull(ctx context.Context, conn *grpc.ClientConn, token string, store st
 }
 
 // use tls certificate for grpc client
-func generateTLSCreds() (credentials.TransportCredentials, error) {
-	certFile := "certs/ca.crt"
+func generateTLSCreds(caPath string) (credentials.TransportCredentials, error) {
+	var (
+		certb []byte
+		err   error
+	)
 
-	certb, err := embedCerts.ReadFile(certFile)
+	if caPath == "" {
+		certb, err = embedCerts.ReadFile("certs/ca.crt")
+	} else {
+		certb, err = os.ReadFile(caPath)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -112,8 +120,8 @@ func generateTLSCreds() (credentials.TransportCredentials, error) {
 }
 
 // grpc connection to server
-func grpcConn(addr string) (*grpc.ClientConn, error) {
-	tlsCreds, err := generateTLSCreds()
+func grpcConn(addr, caFile string) (*grpc.ClientConn, error) {
+	tlsCreds, err := generateTLSCreds(caFile)
 	if err != nil {
 		return nil, err
 	}

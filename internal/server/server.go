@@ -7,6 +7,7 @@ import (
 	"embed"
 	"log"
 	"net"
+	"os"
 
 	"github.com/sourcecd/gophkeeper/internal/auth"
 	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
@@ -129,15 +130,25 @@ func (s *SyncServer) Pull(ctx context.Context, in *keeperproto.SyncPullRequest) 
 }
 
 // use tls certificate for grpc server
-func generateTLSCreds() (credentials.TransportCredentials, error) {
-	certFile := "certs/server.crt"
-	keyFile := "certs/server.key"
+func generateTLSCreds(certPemFile, keyPemFile string) (credentials.TransportCredentials, error) {
+	var (
+		certb, keyb []byte
+		err         error
+	)
 
-	certb, err := embedCerts.ReadFile(certFile)
-	if err != nil {
-		return nil, err
+	if certPemFile == "" || keyPemFile == "" {
+		certb, err = embedCerts.ReadFile("certs/server.crt")
+		if err != nil {
+			return nil, err
+		}
+		keyb, err = embedCerts.ReadFile("certs/server.key")
+	} else {
+		certb, err = os.ReadFile(certPemFile)
+		if err != nil {
+			return nil, err
+		}
+		keyb, err = os.ReadFile(keyPemFile)
 	}
-	keyb, err := embedCerts.ReadFile(keyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -151,13 +162,13 @@ func generateTLSCreds() (credentials.TransportCredentials, error) {
 }
 
 // grpc server configure
-func startGrpcServer(addr string, syncServer *SyncServer) error {
+func startGrpcServer(addr string, syncServer *SyncServer, certPemFile, keyPemFile string) error {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 
-	tlsCreds, err := generateTLSCreds()
+	tlsCreds, err := generateTLSCreds(certPemFile, keyPemFile)
 	if err != nil {
 		return err
 	}
@@ -179,7 +190,7 @@ func Run(ctx context.Context, opt *options.ServerOptions) {
 		log.Fatal(err)
 	}
 
-	if err := startGrpcServer(opt.GrpcAddr, NewSyncServer(db, auth.NewJWTManager(opt.SecurityKey))); err != nil {
+	if err := startGrpcServer(opt.GrpcAddr, NewSyncServer(db, auth.NewJWTManager(opt.SecurityKey)), opt.CertPemFile, opt.KeyPemFile); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -7,10 +7,13 @@ type ServerOptions struct {
 	GrpcAddr        string
 	SecurityKeyFile string
 	SecurityKey     string
+	CertPemFile     string
+	KeyPemFile      string
 }
 
 // ClientOptions options for client
 type ClientOptions struct {
 	GrpcAddr string
 	HttpAddr string
+	CAfile   string
 }
