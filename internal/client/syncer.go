@@ -2,14 +2,22 @@ package client
 
 import (
 	"context"
+	"crypto/x509"
+	"embed"
 	"log"
 
+	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
 	"github.com/sourcecd/gophkeeper/internal/storage"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
+
+// For testing only
+//
+//go:embed certs/ca.crt
+var embedCerts embed.FS
 
 // send register user grpc request to server
 func registerUser(ctx context.Context, conn *grpc.ClientConn, login, password string, token *string) error {
@@ -86,9 +94,30 @@ func syncPull(ctx context.Context, conn *grpc.ClientConn, token string, store st
 	return nil
 }
 
+// use tls certificate for grpc client
+func generateTLSCreds() (credentials.TransportCredentials, error) {
+	certFile := "certs/ca.crt"
+
+	certb, err := embedCerts.ReadFile(certFile)
+	if err != nil {
+		return nil, err
+	}
+
+	cp := x509.NewCertPool()
+	if !cp.AppendCertsFromPEM(certb) {
+		return nil, fixederrors.ErrCertificateLoad
+	}
+
+	return credentials.NewClientTLSFromCert(cp, ""), nil
+}
+
 // grpc connection to server
 func grpcConn(addr string) (*grpc.ClientConn, error) {
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	tlsCreds, err := generateTLSCreds()
+	if err != nil {
+		return nil, err
+	}
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(tlsCreds),
 		// TODO make stream
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(500000000)))
 	if err != nil {

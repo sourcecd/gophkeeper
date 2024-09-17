@@ -3,6 +3,8 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
+	"embed"
 	"log"
 	"net"
 
@@ -12,8 +14,16 @@ import (
 	"github.com/sourcecd/gophkeeper/internal/storage"
 	keeperproto "github.com/sourcecd/gophkeeper/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
+
+const maxRecvMsgSize = 524288000
+
+// For testing only
+//
+//go:embed certs/server.crt certs/server.key
+var embedCerts embed.FS
 
 // SyncServer main grpc protocol struct
 type SyncServer struct {
@@ -118,14 +128,42 @@ func (s *SyncServer) Pull(ctx context.Context, in *keeperproto.SyncPullRequest) 
 	}, nil
 }
 
+// use tls certificate for grpc server
+func generateTLSCreds() (credentials.TransportCredentials, error) {
+	certFile := "certs/server.crt"
+	keyFile := "certs/server.key"
+
+	certb, err := embedCerts.ReadFile(certFile)
+	if err != nil {
+		return nil, err
+	}
+	keyb, err := embedCerts.ReadFile(keyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsCert, err := tls.X509KeyPair(certb, keyb)
+	if err != nil {
+		return nil, err
+	}
+
+	return credentials.NewServerTLSFromCert(&tlsCert), nil
+}
+
 // grpc server configure
 func startGrpcServer(addr string, syncServer *SyncServer) error {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
+
+	tlsCreds, err := generateTLSCreds()
+	if err != nil {
+		return err
+	}
+
 	// TODO make stream
-	s := grpc.NewServer(grpc.MaxRecvMsgSize(500000000))
+	s := grpc.NewServer(grpc.MaxRecvMsgSize(maxRecvMsgSize), grpc.Creds(tlsCreds))
 	keeperproto.RegisterSyncServer(s, syncServer)
 	log.Printf("Starting grpc server on: %s", addr)
 	if err := s.Serve(l); err != nil {

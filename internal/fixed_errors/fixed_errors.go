@@ -16,4 +16,5 @@ var (
 	ErrInvalidCreditCard        = errors.New("wrong credit card number")
 	ErrInvalidTextFormat        = errors.New("invalid text format")
 	ErrWrongLoginPasswordFormat = errors.New("wrong login password format")
+	ErrCertificateLoad          = errors.New("credentials: failed to append certificates")
 )
