@@ -112,6 +112,7 @@ func (pg *PgDB) SyncPut(ctx context.Context, data []*keeperproto.Data, userid in
 		return err
 	}
 	defer tx.Rollback()
+	// TODO: potential put many records at time
 	for _, v := range data {
 		if _, err := tx.StmtContext(ctx, pg.stmtPutDataRequest).ExecContext(ctx, userid, v.Name, v.Dtype, v.Payload, v.Description); err != nil {
 			var pgErr *pgconn.PgError
@@ -132,6 +133,7 @@ func (pg *PgDB) SyncGet(ctx context.Context, names []string, data *[]*keeperprot
 		payload []byte
 		desc    string
 	)
+	// TODO: potetial add direct get some records
 	if len(names) == 0 {
 		rows, err := pg.stmtSelectAllDataRequest.QueryContext(ctx, userid)
 		if err != nil {
