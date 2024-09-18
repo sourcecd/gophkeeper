@@ -6,7 +6,6 @@ type ServerOptions struct {
 	Dsn             string
 	GrpcAddr        string
 	SecurityKeyFile string
-	SecurityKey     string
 	CertPemFile     string
 	KeyPemFile      string
 }

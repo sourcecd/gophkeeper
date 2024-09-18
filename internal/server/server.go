@@ -23,7 +23,7 @@ const maxRecvMsgSize = 524288000
 
 // For testing only
 //
-//go:embed certs/server.crt certs/server.key
+//go:embed certs/server.crt certs/server.key keys/key
 var embedCerts embed.FS
 
 // SyncServer main grpc protocol struct
@@ -185,12 +185,25 @@ func startGrpcServer(addr string, syncServer *SyncServer, certPemFile, keyPemFil
 
 // Run server
 func Run(ctx context.Context, opt *options.ServerOptions) {
+	var (
+		bkey []byte
+		err  error
+	)
+	if opt.SecurityKeyFile == "" {
+		bkey, err = embedCerts.ReadFile("keys/key")
+	} else {
+		bkey, err = os.ReadFile(opt.SecurityKeyFile)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	db, err := storage.PgBaseInit(ctx, opt.Dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := startGrpcServer(opt.GrpcAddr, NewSyncServer(db, auth.NewJWTManager(opt.SecurityKey)), opt.CertPemFile, opt.KeyPemFile); err != nil {
+	if err := startGrpcServer(opt.GrpcAddr, NewSyncServer(db, auth.NewJWTManager(string(bkey))), opt.CertPemFile, opt.KeyPemFile); err != nil {
 		log.Fatal(err)
 	}
 }

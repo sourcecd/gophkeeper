@@ -15,7 +15,7 @@ func TestServerVars(t *testing.T) {
 
 	assert.Equal(t, "dbname=gophkeeper", opt.Dsn)
 	assert.Equal(t, "localhost:2135", opt.GrpcAddr)
-	assert.Equal(t, "key", opt.SecurityKeyFile)
+	assert.Equal(t, "", opt.SecurityKeyFile)
 	assert.Equal(t, "", opt.CertPemFile)
 	assert.Equal(t, "", opt.KeyPemFile)
 }
