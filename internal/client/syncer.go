@@ -15,6 +15,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const maxRecvMsgSize = 524288000
+
 // For testing only
 //
 //go:embed certs/ca.crt
@@ -141,7 +143,7 @@ func grpcConn(addr, caFile string) (*grpc.ClientConn, error) {
 	}
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(tlsCreds),
 		// TODO make stream
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(500000000)))
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxRecvMsgSize)))
 	if err != nil {
 		return nil, err
 	}
