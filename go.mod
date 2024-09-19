@@ -1,6 +1,8 @@
 module github.com/sourcecd/gophkeeper
 
-go 1.23.1
+go 1.22.1
+
+toolchain go1.22.5
 
 require (
 	github.com/charmbracelet/bubbletea v1.1.1
