@@ -30,12 +30,12 @@ jobs:
       - name: Build server binary
         run: |
           cd cmd/server
-          go build -ldflags "-X main.buildVersion=0.1 -X main.buildDate=now -X main.buildCommit=1" -o server
+          go build -buildvcs=false -ldflags "-X main.buildVersion=0.1 -X main.buildDate=now -X main.buildCommit=1" -o server
 
       - name: Build client binary
         run: |
           cd cmd/client
-          go build -ldflags "-X main.buildVersion=0.1 -X main.buildDate=now -X main.buildCommit=1" -o client
+          go build -buildvcs=false -ldflags "-X main.buildVersion=0.1 -X main.buildDate=now -X main.buildCommit=1" -o client
 
       - name: "Internal tests"
         run: |
