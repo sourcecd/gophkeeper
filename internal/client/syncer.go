@@ -22,18 +22,34 @@ const maxRecvMsgSize = 524288000
 //go:embed certs/ca.crt
 var embedCerts embed.FS
 
+// SyncClientIface interface for client syncer
+type SyncClientIface interface {
+	SyncPush(token string, proto []*keeperproto.Data) error
+	SyncPull(token string) error
+	AuthUser(login, password string, token *string) error
+	RegisterUser(login, password string, token *string) error
+	Store() storage.ClientStorage
+}
+
+// SyncClient struct
 type SyncClient struct {
 	ctx   context.Context
 	conn  *grpc.ClientConn
 	store storage.ClientStorage
 }
 
+// NewSyncClient sync client init
 func NewSyncClient(ctx context.Context, conn *grpc.ClientConn, store storage.ClientStorage) *SyncClient {
 	return &SyncClient{
 		ctx:   ctx,
 		conn:  conn,
 		store: store,
 	}
+}
+
+// Store return link to client storage iface
+func (sy *SyncClient) Store() storage.ClientStorage {
+	return sy.store
 }
 
 // RegisterUser send register user grpc request to server

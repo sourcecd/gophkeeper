@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"strings"
 
-	// "time"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/sourcecd/gophkeeper/internal/dataparser"
 	fixederrors "github.com/sourcecd/gophkeeper/internal/fixed_errors"
@@ -22,7 +20,7 @@ import (
 
 // handlers type with methods for REST api
 type handlers struct {
-	syClient *SyncClient
+	syClient SyncClientIface
 }
 
 // validate type of data
@@ -56,7 +54,7 @@ func itemsStringView(items []storage.ListItems) string {
 }
 
 // create handler instance
-func newHandlers(syclient *SyncClient) *handlers {
+func newHandlers(syclient SyncClientIface) *handlers {
 	return &handlers{
 		syClient: syclient,
 	}
@@ -106,7 +104,7 @@ func (h *handlers) postItem() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if err := h.syClient.store.PutItem(name, dtype, req, desc); err != nil {
+		if err := h.syClient.Store().PutItem(name, dtype, req, desc); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -123,7 +121,7 @@ func (h *handlers) getItem() http.HandlerFunc {
 			valType string
 			val     []byte
 		)
-		if err := h.syClient.store.GetItem(chi.URLParam(r, "name"), &valType, &val); err != nil {
+		if err := h.syClient.Store().GetItem(chi.URLParam(r, "name"), &valType, &val); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -153,7 +151,7 @@ func (h *handlers) delItem() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if err := h.syClient.store.DelItem(n); err != nil {
+		if err := h.syClient.Store().DelItem(n); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -209,7 +207,7 @@ func (h *handlers) authUser() http.HandlerFunc {
 func (h *handlers) listAll() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var listItems []storage.ListItems
-		if err := h.syClient.store.ListItems(&listItems); err != nil {
+		if err := h.syClient.Store().ListItems(&listItems); err != nil {
 			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
