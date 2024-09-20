@@ -10,9 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	//"github.com/stretchr/testify/assert"
 	"go.nhat.io/grpcmock"
-	//xassert "go.nhat.io/grpcmock/assert"
 )
 
 func TestGetItems(t *testing.T) {
@@ -35,7 +33,7 @@ func TestGetItems(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient("bufnet", grpc.WithContextDialer(d), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("passthrough:///bufnet", grpc.WithContextDialer(d), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 
 	syncli := NewSyncClient(ctx, conn, storage.NewInMemory())
@@ -45,21 +43,4 @@ func TestGetItems(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-
-	/*
-		out := &keeperproto.SyncPushResponse{}
-
-		err := grpcmock.InvokeUnary(ctx,
-			"gophkeeper.Sync/Push",
-			&keeperproto.SyncPushRequest{Data: []*keeperproto.Data{
-				{
-					Name: "TEST",
-				},
-			}}, out,
-			grpcmock.WithContextDialer(d),
-			grpcmock.WithInsecure(),
-		)
-
-		xassert.EqualMessage(t, expected, out)
-		assert.NoError(t, err)*/
 }
