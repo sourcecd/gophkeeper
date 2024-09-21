@@ -24,6 +24,10 @@ go.work.sum
 # env file
 .env
 
+# bin
 cmd/server/server
 cmd/client/client
 cmd/tui/tui
+
+# profiles
+prof
