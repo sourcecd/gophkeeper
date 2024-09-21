@@ -18,4 +18,6 @@ func TestServerVars(t *testing.T) {
 	assert.Equal(t, "", opt.SecurityKeyFile)
 	assert.Equal(t, "", opt.CertPemFile)
 	assert.Equal(t, "", opt.KeyPemFile)
+
+	printBuildFlags()
 }

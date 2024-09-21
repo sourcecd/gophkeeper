@@ -16,4 +16,6 @@ func TestClientVars(t *testing.T) {
 	assert.Equal(t, "localhost:2135", opt.GrpcAddr)
 	assert.Equal(t, "localhost:8080", opt.HttpAddr)
 	assert.Equal(t, "", opt.CAfile)
+
+	printBuildFlags()
 }
