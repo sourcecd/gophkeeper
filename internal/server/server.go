@@ -30,7 +30,7 @@ var embedCerts embed.FS
 type SyncServer struct {
 	keeperproto.UnimplementedSyncServer
 	store storage.ServerStorage
-	jwtm  *auth.JWTManager
+	jwtm  auth.JWTManagerIface
 }
 
 // check and unpack jwt token
@@ -52,7 +52,7 @@ func (s *SyncServer) checkToken(ctx context.Context, userid *int64) error {
 }
 
 // NewSyncServer create server instance
-func NewSyncServer(db storage.ServerStorage, jwtm *auth.JWTManager) *SyncServer {
+func NewSyncServer(db storage.ServerStorage, jwtm auth.JWTManagerIface) *SyncServer {
 	return &SyncServer{store: db, jwtm: jwtm}
 }
 

@@ -11,6 +11,13 @@ import (
 
 const tokenDuration = 12 * time.Hour
 
+// JWTManagerIface interface
+type JWTManagerIface interface {
+	PrepareUser(username string, password string) (*User, error)
+	Generate(userid int64) (string, error)
+	Verify(accessToken string) (*UserClaims, error)
+}
+
 // User struct for work with username and password
 type User struct {
 	Username       string

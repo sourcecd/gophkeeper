@@ -49,6 +49,7 @@ func (c *ClientInMemory) SyncPut(protodata []*keeperproto.Data) error {
 }
 
 // SyncGet get data (with server sync) from client in-memory storage
+// Not used, for potencial full sync from client to server
 func (c *ClientInMemory) SyncGet(protodata *[]*keeperproto.Data) error {
 	c.RLock()
 	defer c.RUnlock()
