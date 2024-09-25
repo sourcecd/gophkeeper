@@ -1,0 +1,47 @@
+name: autotests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  maintest:
+    runs-on: ubuntu-latest
+    container: golang:1.22
+
+    # services:
+    #   postgres:
+    #     image: postgres
+    #     env:
+    #       POSTGRES_PASSWORD: postgres
+    #       POSTGRES_DB: gophkeeper
+    #     options: >-
+    #       --health-cmd pg_isready
+    #       --health-interval 5s
+    #       --health-timeout 5s
+    #       --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build server binary
+        run: |
+          cd cmd/server
+          go build -buildvcs=false -ldflags "-X main.buildVersion=0.1 -X main.buildDate=now -X main.buildCommit=1" -o server
+
+      - name: Build client binary
+        run: |
+          cd cmd/client
+          go build -buildvcs=false -ldflags "-X main.buildVersion=0.1 -X main.buildDate=now -X main.buildCommit=1" -o client
+
+      - name: "Internal tests"
+        run: |
+          go test -v ./...
+
+      - name: "Internal tests (race detection)"
+        run: |
+          go test -v -race ./...
+
