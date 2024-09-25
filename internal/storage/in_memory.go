@@ -21,21 +21,21 @@ type ListItems struct {
 	Desc  string
 }
 
-// ClientInMemory in-memory client storage
-type ClientInMemory struct {
+// InMemoryStore in-memory client storage
+type InMemoryStore struct {
 	sync.RWMutex
 	data map[string]valueStore
 }
 
 // NewInMemory init client in-memory storage
-func NewInMemory() *ClientInMemory {
-	return &ClientInMemory{
+func NewInMemory() *InMemoryStore {
+	return &InMemoryStore{
 		data: make(map[string]valueStore),
 	}
 }
 
 // SyncPut put data (with server sync) to client in-memory storage
-func (c *ClientInMemory) SyncPut(protodata []*keeperproto.Data) error {
+func (c *InMemoryStore) SyncPut(protodata []*keeperproto.Data) error {
 	c.Lock()
 	defer c.Unlock()
 	for _, v := range protodata {
@@ -50,7 +50,7 @@ func (c *ClientInMemory) SyncPut(protodata []*keeperproto.Data) error {
 
 // SyncGet get data (with server sync) from client in-memory storage
 // Not used, for potencial full sync from client to server
-func (c *ClientInMemory) SyncGet(protodata *[]*keeperproto.Data) error {
+func (c *InMemoryStore) SyncGet(protodata *[]*keeperproto.Data) error {
 	c.RLock()
 	defer c.RUnlock()
 	for k, v := range c.data {
@@ -65,7 +65,7 @@ func (c *ClientInMemory) SyncGet(protodata *[]*keeperproto.Data) error {
 }
 
 // PutItem to in-memory client storage (one item)
-func (c *ClientInMemory) PutItem(name, vType string, value []byte, desc string) error {
+func (c *InMemoryStore) PutItem(name, vType string, value []byte, desc string) error {
 	c.Lock()
 	defer c.Unlock()
 	if _, ok := c.data[name]; ok {
@@ -80,7 +80,7 @@ func (c *ClientInMemory) PutItem(name, vType string, value []byte, desc string) 
 }
 
 // GetItem from in-memory client storage (one item)
-func (c *ClientInMemory) GetItem(name string, valueType *string, value *[]byte) error {
+func (c *InMemoryStore) GetItem(name string, valueType *string, value *[]byte) error {
 	c.RLock()
 	defer c.RUnlock()
 	if v, ok := c.data[name]; ok {
@@ -92,7 +92,7 @@ func (c *ClientInMemory) GetItem(name string, valueType *string, value *[]byte) 
 }
 
 // ListItems metainfo from in-memory client storage
-func (c *ClientInMemory) ListItems(items *[]ListItems) error {
+func (c *InMemoryStore) ListItems(items *[]ListItems) error {
 	c.RLock()
 	defer c.RUnlock()
 	for k, v := range c.data {
@@ -106,7 +106,7 @@ func (c *ClientInMemory) ListItems(items *[]ListItems) error {
 }
 
 // DelItem from in-memory client storage
-func (c *ClientInMemory) DelItem(name string) error {
+func (c *InMemoryStore) DelItem(name string) error {
 	c.Lock()
 	defer c.Unlock()
 	if _, ok := c.data[name]; ok {

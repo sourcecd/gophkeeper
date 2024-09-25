@@ -15,7 +15,7 @@ import (
 const testToken = "XXX.YYY.ZZZ"
 
 type SyncTest struct {
-	inmem *storage.ClientInMemory
+	inmem *storage.InMemoryStore
 }
 
 func (sy *SyncTest) SyncPush(token string, proto []*keeperproto.Data) error {
